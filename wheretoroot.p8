@@ -148,7 +148,7 @@ function tree:new(x,y,o)
  o.x=x
  o.y=y
  o.r=o.r or 3
- o.growrate=0.1
+ o.growrate=0.05+rnd(0.1)
  o.maxseeds=o.maxseeds or 3
  o.color=o.color or 4
 
@@ -161,14 +161,27 @@ function tree:new(x,y,o)
  return o
 end
 
+function tree:update()
+ self.age+=self.growrate/30
+ return self.age>1
+end
+
 function tree:draw()
- circfill(
-  self.x,self.y,self.r,self.color
+ --draw trunk
+ local r=self.r*min(
+  1,self.age*2
  )
+ circfill(
+  self.x,self.y,r,self.color
+ )
+ if (self.age<0.5) return
+
+ --draw leaves
+ r=(self.age-0.5)*2*self.r
  for a in all(self.seed_angles) do
-  local x=self.x+cos(a)*self.r*2
-  local y=self.y+sin(a)*self.r*2
-  circfill(x,y,2,11)
+  local x=self.x+cos(a)*r
+  local y=self.y+sin(a)*r
+  circfill(x,y,11,2)
  end
 end
 
@@ -191,13 +204,19 @@ function _init()
 end
 
 function _update()
+ for i=#trees,1,-1 do
+  local destroy=trees[i]:update()
+  if destroy then
+   grid:del(trees[i])
+   trees[i]=trees[#trees]
+   deli(trees,#trees)
+  end
+ end
 end
 
 function _draw()
  cls()
- for t in all(trees) do
-  t:draw()
- end
+ foreach(trees,tree.draw)
 end
 
 __gfx__
