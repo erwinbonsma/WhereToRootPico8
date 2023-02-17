@@ -12,36 +12,43 @@ function extend(clz,baseclz)
  end
 end
 
-cellw=16
-cellh=16
-gridw=128
-gridh=128
-gridcols=gridw\cellw+2
-gridrows=gridh\cellh+2
-
-function cellidx(x,y)
- return gridcols+1+(
-  (x\cellw)
-  +(y\cellh)*gridcols
- )
-end
+cellsz=16
 
 cellgrid={}
-function cellgrid:new()
+function cellgrid:new(w,h)
  local o=setmetatable({},self)
  self.__index=self
 
- self.cells={}
- for i=1,gridcols*gridrows do
-  add(self.cells,{})
+ o.w=w or 128
+ o.h=h or 128
+ --extra empty col to facilitate
+ --left and right neighbour
+ --checks at edge of grid
+ o.ncols=ceil(o.w/cellsz)+1
+ o.nrows=ceil(o.h/cellsz)
+ o.cells={}
+ for i=1,o.ncols*o.nrows do
+  add(o.cells,{})
  end
 
  return o
 end
 
+function cellgrid:_cellidx(x,y)
+ --starts at one
+ return 1+(
+  (x\cellsz)+
+  (y\cellsz)*self.ncols
+ )
+end
+
 function cellgrid:add(obj)
- obj.cellidx=cellidx(
+ obj.cellidx=self:_cellidx(
   obj.x,obj.y
+ )
+ assert(
+  obj.cellidx%self.ncols!=0,
+  "cannot add to wrapping col"
  )
  add(
   self.cells[obj.cellidx],obj
@@ -60,6 +67,10 @@ end
 function cellgrid:_cellhit(
  ci,x,y,r,objx
 )
+ if ci<1 or ci>#self.cells then
+  return false
+ end
+
  for obj in all(self.cells[ci]) do
   if obj!=objx then
    local d=vlen(x-obj.x,y-obj.y)
@@ -71,16 +82,14 @@ function cellgrid:_cellhit(
  return false
 end
 
-cell_deltas={
- 0,-1,1,-gridcols,gridcols
-}
 function cellgrid:empty(x,y,r,objx)
- local ci=cellidx(x,y)
- 
+ local ci=self:_cellidx(x,y)
+
  for dx=-1,1 do
   for dy=-1,1 do
    if self:_cellhit(
-    ci+dx+dy*gridcols,x,y,r,objx
+    ci+dx+dy*self.ncols,
+    x,y,r,objx
    ) then
     return false
    end
