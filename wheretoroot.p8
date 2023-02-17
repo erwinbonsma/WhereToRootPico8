@@ -148,7 +148,7 @@ function tree:new(x,y,o)
  o.x=x
  o.y=y
  o.r=o.r or 3
- o.growrate=0.05+rnd(0.1)
+ o.growrate=0.02+rnd(0.02)
  o.maxseeds=o.maxseeds or 3
  o.color=o.color or 4
 
@@ -168,20 +168,21 @@ end
 
 function tree:draw()
  --draw trunk
- local r=self.r*min(
-  1,self.age*2
+ local r=self.r*(
+  min(1,self.age*2)
+  -max(0,self.age-0.8)*5
  )
  circfill(
   self.x,self.y,r,self.color
  )
- if (self.age<0.5) return
 
  --draw leaves
- r=(self.age-0.5)*2*self.r
+ local m=min(0.5,self.age-0.2)*2
+ r=m*2*self.r
  for a in all(self.seed_angles) do
   local x=self.x+cos(a)*r
   local y=self.y+sin(a)*r
-  circfill(x,y,11,2)
+  circfill(x,y,m*2.5,11)
  end
 end
 
