@@ -1,6 +1,10 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
+seed_r=2.5
+tree_r=3
+branch_l=6
+
 function vlen(dx,dy)
  return sqrt(dx*dx+dy*dy)
 end
@@ -82,7 +86,14 @@ function cellgrid:_cellhit(
  return false
 end
 
-function cellgrid:empty(x,y,r,objx)
+function cellgrid:fits(x,y,r,objx)
+ if (
+  x<0 or x>self.w or
+  y<0 or y>self.h
+ ) then
+  return false
+ end
+
  local ci=self:_cellidx(x,y)
 
  for dx=-1,1 do
@@ -149,6 +160,24 @@ function create_angles(n,dmin)
  return angles
 end
 
+seed={}
+function seed:new(dx,dy,o)
+ local o=setmetatable(o or {},self)
+ self.__index=self
+
+ o.dx=dx
+ o.dy=dy
+ o.age=0
+
+ return o
+end
+
+function seed:draw()
+ circfill(
+  self.x,self.y,self.r,10
+ )
+end
+
 tree={}
 function tree:new(x,y,o)
  local o=setmetatable(o or {},self)
@@ -157,22 +186,43 @@ function tree:new(x,y,o)
  o.x=x
  o.y=y
  o.r=o.r or 3
- o.growrate=0.02+rnd(0.02)
+ o.growrate=0.04+rnd(0.02)
  o.maxseeds=o.maxseeds or 3
  o.color=o.color or 4
 
  o.age=0
 
- o.seed_angles=create_angles(
+ local angles=create_angles(
   o.maxseeds or 3,0.15
  )
+ o.seeds={}
+ for angle in all(angles) do
+  add(o.seeds,seed:new(
+   sin(angle),cos(angle)
+  ))
+ end
 
  return o
 end
 
 function tree:update()
  self.age+=self.growrate/30
- return self.age>1
+ if (self.age<1) return false
+
+ --drop seeds before destroy
+ for s in all(self.seeds) do
+  s.x=self.x+s.dx*branch_l
+  s.y=self.y+s.dy*branch_l
+  s.r=seed_r
+  if grid:fits(
+   s.x,s.y,s.r
+  ) then
+   add(seeds,s)
+   grid:add(s)
+  end
+ end
+
+ return true
 end
 
 function tree:draw()
@@ -187,24 +237,25 @@ function tree:draw()
 
  --draw leaves
  local m=min(0.5,self.age-0.2)*2
- r=m*2*self.r
- for a in all(self.seed_angles) do
-  local x=self.x+cos(a)*r
-  local y=self.y+sin(a)*r
-  circfill(x,y,m*2.5,11)
+ local r1=m*2.5
+ local r2=m*branch_l
+ for s in all(self.seeds) do
+  local x=self.x+s.dx*r2
+  local y=self.y+s.dy*r2
+  circfill(x,y,r1,11)
  end
 end
 
-tree_r=3
 function _init()
  grid=cellgrid:new()
  trees={}
+ seeds={}
  for i=1,10 do
   local t=nil
   while t==nil do
    local x=rnd(128)
    local y=rnd(128)
-   if grid:empty(x,y,6) then
+   if grid:fits(x,y,6) then
     t=tree:new(x,y)
    end
   end
@@ -226,6 +277,7 @@ end
 
 function _draw()
  cls()
+ foreach(seeds,seed.draw)
  foreach(trees,tree.draw)
 end
 
