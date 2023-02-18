@@ -46,16 +46,19 @@ function cellgrid:_cellidx(x,y)
  )
 end
 
-function cellgrid:add(obj)
- obj.cellidx=self:_cellidx(
-  obj.x,obj.y
- )
+function cellgrid:_add(obj,ci)
+ assert(obj.cellidx==nil)
  assert(
-  obj.cellidx%self.ncols!=0,
+  ci%self.ncols!=0,
   "cannot add to wrapping col"
  )
- add(
-  self.cells[obj.cellidx],obj
+ add(self.cells[ci],obj)
+ obj.cellidx=ci
+end
+
+function cellgrid:add(obj)
+ self:_add(
+  obj,self:_cellidx(obj.x,obj.y)
  )
 end
 
@@ -66,6 +69,16 @@ function cellgrid:del(obj)
  )
  assert(objd==obj)
  obj.cellidx=nil
+end
+
+function cellgrid:moved(obj)
+ local ci=self:_cellidx(
+  obj.x,obj.y
+ )
+ if ci!=obj.cellidx then
+  self:del(obj)
+  self:_add(obj,ci)
+ end
 end
 
 function cellgrid:_cellhit(
@@ -88,8 +101,8 @@ end
 
 function cellgrid:fits(x,y,r,objx)
  if (
-  x<0 or x>self.w or
-  y<0 or y>self.h
+  x<r or x>self.w-r or
+  y<r or y>self.h-r
  ) then
   return false
  end
@@ -168,14 +181,35 @@ function seed:new(dx,dy,o)
  o.dx=dx
  o.dy=dy
  o.age=0
+ o.speed=o.speed or 0.1
+ o.moving=true
 
  return o
+end
+
+function seed:update()
+ if (not self.moving) return
+
+ local dx=self.dx*self.speed
+ local dy=self.dy*self.speed
+ if grid:fits(
+  self.x+dx,self.y+dy,self.r,self
+ ) then
+  self.x+=dx
+  self.y+=dy
+  grid:moved(self)
+ else
+  self.moving=false
+ end
 end
 
 function seed:draw()
  circfill(
   self.x,self.y,self.r,10
  )
+ if not self.moving then
+  pset(self.x,self.y,8)
+ end
 end
 
 tree={}
@@ -271,6 +305,15 @@ function _update()
    grid:del(trees[i])
    trees[i]=trees[#trees]
    deli(trees,#trees)
+  end
+ end
+
+ for i=#seeds,1,-1 do
+  local destroy=seeds[i]:update()
+  if destroy then
+   grid:del(seeds[i])
+   seeds[i]=seeds[#seeds]
+   deli(seeds,#seeds)
   end
  end
 end
