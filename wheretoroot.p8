@@ -2,7 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
 frate=30
-seed_r=2.5
+seed_r=2
 tree_r=3
 branch_l=8
 yscale=0.8
@@ -13,22 +13,20 @@ pal({
  [10]=-5
 },1)
 families={
- {x=31,y=31,p={
+ {x=23,y=31,p={
   --red
   [6]=8,[5]=2,[7]=14
  }},
- {x=95,y=31,p={
+ {x=87,y=31,p={
   --pink
   [6]=14,[5]=2,[7]=15
  }},
- {x=31,y=95,p={
-  --yellow
-  --[6]=10,[5]=9,[7]=7
+ {x=23,y=95,p={
+  --green
   [6]=10,[5]=3,[7]=11
  }},
- {x=95,y=95,p={
+ {x=87,y=95,p={
   --blue
-  --[6]=12,[5]=13,[7]=6
   [6]=13,[5]=2,[7]=12
  }}
 }
@@ -51,7 +49,7 @@ function cellgrid:new(w,h)
  local o=setmetatable({},self)
  self.__index=self
 
- o.w=w or 128
+ o.w=w or 112
  o.h=h or 128
  --extra empty col to facilitate
  --left and right neighbour
@@ -345,7 +343,8 @@ function tree:draw_trunk()
   spr(
    tree_sprites[si],
    self.x-7,
-   self.y*yscale-10,2,2
+   self.y*yscale-10,
+   2,2
   )
  end
  pal(0)
@@ -377,6 +376,7 @@ function _init()
   add(trees,t)
   grid:add(t)
  end
+ camera(-8,-16)
 end
 
 function _update()
