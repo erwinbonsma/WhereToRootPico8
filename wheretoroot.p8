@@ -272,8 +272,7 @@ function tree:update()
  return true
 end
 
-function tree:draw()
- --draw trunk
+function tree:draw_trunk()
  local r=self.r*(
   min(1,self.age*2)
   -max(0,self.age-0.8)*5
@@ -281,8 +280,9 @@ function tree:draw()
  circfill(
   self.x,self.y,r,self.color
  )
+end
 
- --draw leaves
+function tree:draw_seeds()
  local m=min(0.5,self.age-0.2)*2
  local r1=m*2.5
  local r2=m*branch_l
@@ -334,7 +334,8 @@ end
 function _draw()
  cls()
  foreach(seeds,seed.draw)
- foreach(trees,tree.draw)
+ foreach(trees,tree.draw_trunk)
+ foreach(trees,tree.draw_seeds)
 end
 
 __gfx__
