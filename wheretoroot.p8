@@ -1,6 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
+frate=30
 seed_r=2.5
 tree_r=3
 branch_l=6
@@ -181,6 +182,9 @@ function seed:new(dx,dy,o)
  o.dx=dx
  o.dy=dy
  o.age=0
+ o.growrate=(
+  0.02+rnd(0.03)
+ )/frate
  o.speed=o.speed or 0.1
  o.moving=true
 
@@ -188,6 +192,15 @@ function seed:new(dx,dy,o)
 end
 
 function seed:update()
+ self.age+=self.growrate
+ if self.age>1 then
+  --root and change into tree
+  local t=tree:new(self.x,self.y)
+  grid:add(t)
+  add(trees,t)
+  return true
+ end
+
  if (not self.moving) return
 
  local dx=self.dx*self.speed
@@ -200,6 +213,7 @@ function seed:update()
   grid:moved(self)
  else
   self.moving=false
+  self.growrate*=2
  end
 end
 
@@ -207,9 +221,6 @@ function seed:draw()
  circfill(
   self.x,self.y,self.r,10
  )
- if not self.moving then
-  pset(self.x,self.y,8)
- end
 end
 
 tree={}
@@ -220,7 +231,9 @@ function tree:new(x,y,o)
  o.x=x
  o.y=y
  o.r=o.r or 3
- o.growrate=0.04+rnd(0.02)
+ o.growrate=(
+  0.04+rnd(0.02)
+ )/frate
  o.maxseeds=o.maxseeds or 3
  o.color=o.color or 4
 
@@ -240,8 +253,8 @@ function tree:new(x,y,o)
 end
 
 function tree:update()
- self.age+=self.growrate/30
- if (self.age<1) return false
+ self.age+=self.growrate
+ if (self.age<1) return
 
  --drop seeds before destroy
  for s in all(self.seeds) do
