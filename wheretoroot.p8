@@ -5,6 +5,7 @@ frate=30
 seed_r=2.5
 tree_r=3
 branch_l=6
+yscale=0.8
 pal({
  [0]=-16,
  [5]=-11,
@@ -249,7 +250,9 @@ end
 
 function seed:draw()
  pal(self.family.p)
- spr(5,self.x-1,self.y-2)
+ spr(
+  4,self.x-1,self.y*yscale-2
+ )
  pal(0)
 end
 
@@ -265,42 +268,59 @@ function tree:new(x,y,o)
   0.04+rnd(0.02)
  )/frate
  o.maxseeds=o.maxseeds or 3
- o.color=o.color or 4
 
  o.age=0
-
- local angles=create_angles(
-  o.maxseeds or 3,0.15
- )
- o.seeds={}
- for angle in all(angles) do
-  add(o.seeds,seed:new(
-   sin(angle),cos(angle),{
-    family=o.family
-   }
-  ))
- end
+ o.seeds=nil
 
  return o
 end
 
-function tree:update()
- self.age+=self.growrate
- if (self.age<1) return
+function tree:_blossom()
+ self.seeds={}
+ local angles=create_angles(
+  self.maxseeds,0.15
+ )
 
- --drop seeds before destroy
- for s in all(self.seeds) do
+ for a in all(angles) do
+  print(a)
+  local s=seed:new(
+   sin(a),cos(a),{
+    family=self.family
+   }
+  )
   s.x=self.x+s.dx*branch_l
   s.y=self.y+s.dy*branch_l
   s.r=seed_r
-  if grid:fits(
-   s.x,s.y,s.r
-  ) then
-   add(seeds,s)
-   grid:add(s)
+  if hgrid:fits(s.x,s.y,s.r) then
+   hgrid:add(s)
+   add(self.seeds,s)
   end
  end
+end
 
+function tree:_dropseeds()
+ for s in all(self.seeds) do
+  hgrid:del(s)
+  if grid:fits(s.x,s.y,s.r) then
+   grid:add(s)
+   add(seeds,s)
+  end
+ end
+end
+
+function tree:update()
+ self.age+=self.growrate
+
+ if (
+  self.age>=0.7 and
+  self.seeds==nil
+ ) then
+  self:_blossom()
+ end 
+ 
+ if (self.age<1) return
+
+ self:_dropseeds()
  return true
 end
 
@@ -320,39 +340,41 @@ tree_sprites={
 }
 
 function tree:draw_trunk()
- local si=ceil(self.age*30)
+ local si=min(
+  ceil(self.age*40),30
+ )
  if si<20 then
   spr(
    tree_sprites[si],
-   self.x-3,self.y-7
+   self.x-3,
+   self.y*yscale-7
   )
  else
   spr(
    tree_sprites[si],
-   self.x-7,self.y-10,2,2
+   self.x-7,
+   self.y*yscale-10,2,2
   )
  end
 end
 
 function tree:draw_seeds()
- local m=min(0.5,self.age-0.2)*2
- local r1=m*2.5
- local r2=m*branch_l
+ local si=min(4,ceil(
+  (self.age-0.70)/0.3*5
+ ))
 
- if (m<=0 or true) return
- local si=ceil(m*4)
+ if (si<=0) return
 
  pal(self.family.p)
  for s in all(self.seeds) do
-  local x=self.x+s.dx*r2
-  local y=self.y+s.dy*r2
-  spr(si,x-3,y-3)
+  spr(si,s.x-1,s.y*yscale-8)
  end
  pal(0)
 end
 
 function _init()
  grid=cellgrid:new()
+ hgrid=cellgrid:new()
  trees={}
  seeds={}
  for f in all(families) do
@@ -392,10 +414,10 @@ function _draw()
 end
 
 __gfx__
-00000000000000000500000005000000055000000660000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000060000005650000006650000566500006765000000000000000000000000000000000000000000000000000000000004400000000000000000000000
-00700700000000000500000056600000566500006665000000000000000000000000000000000000000000000000000000004045000040000000000000000000
-00077000000000000000000000500000055000000550000000000000000000000000000000000000000000000000000004440040040444000000000000000000
+00000000000000000000000006000000066000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000060000000650000067500000676500000000000000000000000000000000000000000000000000000000000000000004400000000000000000000000
+00700700000000000550000005000000666500000000000000000000000000000000000000000000000000000000000000004045000040000000000000000000
+00077000000000000000000000000000055000000000000000000000000000000000000000000000000000000000000004440040040444000000000000000000
 00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000044445004500000000000000000000
 00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000045045000040000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000044004445450044400000000000000000
