@@ -5,6 +5,12 @@ frate=30
 seed_r=2.5
 tree_r=3
 branch_l=6
+families={
+ {x=31,y=31,c1=11,c2=3},
+ {x=95,y=31,c1=12,c2=13},
+ {x=31,y=95,c1=10,c2=9},
+ {x=95,y=95,c1=15,c2=14}
+}
 
 function vlen(dx,dy)
  return sqrt(dx*dx+dy*dy)
@@ -195,7 +201,11 @@ function seed:update()
  self.age+=self.growrate
  if self.age>1 then
   --root and change into tree
-  local t=tree:new(self.x,self.y)
+  local t=tree:new(
+   self.x,self.y,{
+    family=self.family
+   }
+  )
   grid:add(t)
   add(trees,t)
   return true
@@ -219,7 +229,8 @@ end
 
 function seed:draw()
  circfill(
-  self.x,self.y,self.r,10
+  self.x,self.y,self.r,
+  self.family.c2
  )
 end
 
@@ -245,7 +256,9 @@ function tree:new(x,y,o)
  o.seeds={}
  for angle in all(angles) do
   add(o.seeds,seed:new(
-   sin(angle),cos(angle)
+   sin(angle),cos(angle),{
+    family=o.family
+   }
   ))
  end
 
@@ -289,7 +302,10 @@ function tree:draw_seeds()
  for s in all(self.seeds) do
   local x=self.x+s.dx*r2
   local y=self.y+s.dy*r2
-  circfill(x,y,r1,11)
+  circfill(
+   x,y,r1,
+   self.family.c1
+  )
  end
 end
 
@@ -297,15 +313,10 @@ function _init()
  grid=cellgrid:new()
  trees={}
  seeds={}
- for i=1,10 do
-  local t=nil
-  while t==nil do
-   local x=rnd(128)
-   local y=rnd(128)
-   if grid:fits(x,y,6) then
-    t=tree:new(x,y)
-   end
-  end
+ for f in all(families) do
+  t=tree:new(f.x,f.y,{
+   family=f
+  })
   add(trees,t)
   grid:add(t)
  end
