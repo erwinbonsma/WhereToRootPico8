@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
--- where to root? v0.1
+-- where to root? v0.1.1
 -- (c) 2023  eriban
 
 frate=30
@@ -582,7 +582,7 @@ function tree:draw_seeds()
 end
 
 function _init()
- local lowrez=true
+ local lowrez=false
 
  grid=cellgrid:new()
  hgrid=cellgrid:new()
