@@ -319,7 +319,8 @@ function seed:new(dx,dy,o)
  o.dy=dy
  o.age=0
  o.growrate=(
-  0.1+rnd(0.02)
+  0.02+rnd(0.02)
+  --0.1+rnd(0.02)
  )/frate
  o.speed=o.speed or 0.1
  o.moving=true
@@ -348,6 +349,13 @@ function seed:_tree_fits(t)
 end
 
 function seed:update()
+ if self.destroy then
+  --handle destruction by other
+  --seeds w/o impacting ongoing
+  --seed update iteration
+  return true
+ end
+
  if self.anim!=nil then
   if coinvoke(self.anim) then
    self.anim=nil
@@ -446,7 +454,32 @@ end
 function tree:_dropseeds()
  for s in all(self.seeds) do
   hgrid:del(s)
-  if grid:fits(s.x,s.y,s.r) then
+
+  local fits=true
+  local visitor=function(obj)
+   --drop destroys seeds and
+   --small trees
+   if (
+    getmetatable(obj)==seed
+   ) then
+    obj.destroy=true
+   else
+    assert(
+     getmetatable(obj)==tree
+    )
+    if obj.age<0.25 then
+     obj.destroy=true
+    else
+     --high tree prevents drop
+     fits=false
+    end
+   end
+  end
+  grid:visit_hits(
+   s.x,s.y,s.r,visitor
+  )
+
+  if fits then
    grid:add(s)
    add(seeds,s)
    s.anim=cowrap(
@@ -457,6 +490,10 @@ function tree:_dropseeds()
 end
 
 function tree:update()
+ if self.destroy then
+  return true
+ end
+
  self.age+=self.growrate
 
  if (
