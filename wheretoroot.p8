@@ -302,7 +302,11 @@ function seedroot_anim(args)
   end
  end
 
- add(trees,tree)
+ if seed:_tree_fits(tree) then
+  grid:add(tree)
+  add(trees,tree)
+ end
+
  seed.destroy=true
 end
 
@@ -355,24 +359,19 @@ function seed:update()
  self.age+=self.growrate
 
  if self.age>1 then
-  --root if there's room
+  --try to root
   local t=tree:new(
    self.x,self.y,{
     family=self.family
    }
   )
 
-  if self:_tree_fits(t) then
-   grid:add(t)
-   self.anim=cowrap(
-    "root",seedroot_anim,self,t
-   )
-   -- anim destroys seed
-   return false
-  else
-   -- destroy seed immediately
-   return true
-  end
+  self.anim=cowrap(
+   "root",seedroot_anim,self,t
+  )
+
+  --anim destroys seed
+  return
  end
 
  if (not self.moving) return
