@@ -248,9 +248,9 @@ function seedroot_anim(args)
  end
  yield()
 
- while seed.si<8 do
+ while seed.si<7 do
   seed.si+=1
-  for i=1,3 do
+  for i=1,10 do
    yield()
   end
  end
@@ -329,11 +329,21 @@ function seed:update()
 end
 
 function seed:draw()
+ local y=ceil(self.y*yscale)
+
+ --shadow
+ --local shadow_w=max(
+ -- 0,2-abs(self.si-4)
+ --)
+ --line(
+ -- self.x,y,
+ -- self.x+shadow_w,y,0
+ --)
+
+ --seed sprite
  pal(self.family.p)
  spr(
-  self.si,
-  self.x-1,
-  self.y*yscale-self.h-3
+  self.si,self.x-1,y-self.h-3
  )
  pal(0)
 end
@@ -484,7 +494,7 @@ function _init()
 
  camera(-8,-16)
  pal({
-  [0]=-16,
+  [9]=-16,
   [5]=-11,
   [8]=-8,
   [10]=-5
@@ -512,7 +522,7 @@ function _update()
 end
 
 function _draw()
- cls()
+ cls(9)
  foreach(seeds,seed.draw)
  foreach(trees,tree.draw_trunk)
  foreach(trees,tree.draw_crown)
