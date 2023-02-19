@@ -228,12 +228,25 @@ function seeddrop_anim(args)
  local seed=args[1]
  seed.vh=0
  while seed.h>0 do
-  seed.h-=seed.vh
-  seed.vh+=0.04
+  seed.vh-=0.04
+  seed.h+=seed.vh
   yield()
  end
  seed.h=0
  seed.vh=nil
+end
+
+function seedroot_anim(args)
+ local seed=args[1]
+ local tree=args[2]
+ seed.vh=0.5
+ while seed.h>0 or seed.vh>0 do
+  seed.vh-=0.04
+  seed.h+=seed.vh
+  yield()
+ end
+ add(trees,tree)
+ seed.destroy=true
 end
 
 seed={}
@@ -259,7 +272,8 @@ function seed:update()
   if coinvoke(self.anim) then
    self.anim=nil
   end
-  return
+
+  return self.destroy
  end
 
  self.age+=self.growrate
@@ -276,10 +290,15 @@ function seed:update()
    t.x,t.y,t.r,self
   ) then
    grid:add(t)
-   add(trees,t)
+   self.anim=cowrap(
+    "root",seedroot_anim,self,t
+   )
+   -- anim destroys seed
+   return false
+  else
+   -- destroy seed immediately
+   return true
   end
-
-  return true
  end
 
  if (not self.moving) return
