@@ -133,10 +133,25 @@ function cellgrid:moved(obj)
  end
 end
 
+function cellgrid:_invalid_idx(
+ ci
+)
+ return ci<1 or ci>#self.cells
+end
+
+function cellgrid:_invalid_pos(
+ x,y
+)
+ return (
+  x<0 or x>self.w-1 or
+  y<0 or y>self.h-1
+ )
+end
+
 function cellgrid:_cellhit(
  ci,x,y,r,objx
 )
- if ci<1 or ci>#self.cells then
+ if self:_invalid_idx(ci) then
   return false
  end
 
@@ -148,14 +163,27 @@ function cellgrid:_cellhit(
    end
   end
  end
+
  return false
 end
 
+function cellgrid:_visit_hits(
+ ci,x,y,r,visitor
+)
+ if self:_invalid_idx(ci) then
+  return
+ end
+
+ for obj in all(self.cells[ci]) do
+  local d=vlen(x-obj.x,y-obj.y)
+  if d<obj.r+r then
+   visitor(obj)
+  end
+ end
+end
+
 function cellgrid:fits(x,y,r,objx)
- if (
-  x<0 or x>self.w-1 or
-  y<0 or y>self.h-1
- ) then
+ if self:_invalid_pos(x,y) then
   return false
  end
 
@@ -173,6 +201,25 @@ function cellgrid:fits(x,y,r,objx)
  end
  
  return true
+end
+
+function cellgrid:visit_hits(
+ x,y,r,visitor
+)
+ if self:_invalid_pos(x,y) then
+  return
+ end
+
+ local ci=self:_cellidx(x,y)
+
+ for dx=-1,1 do
+  for dy=-1,1 do
+   self:_visit_hits(
+    ci+dx+dy*self.ncols,
+    x,y,r,visitor
+   )
+  end
+ end
 end
 
 function create_angles(n,dmin)
@@ -278,6 +325,24 @@ function seed:new(dx,dy,o)
  return o
 end
 
+--check if tree fits. it may
+--hit seeds, but not another
+--tree
+function seed:_tree_fits(t)
+ local fits=true
+ local visitor=function(obj)
+  if getmetatable(obj)==tree then
+   fits=false
+  end
+ end
+
+ grid:visit_hits(
+  t.x,t.y,t.r,visitor
+ )
+
+ return fits
+end
+
 function seed:update()
  if self.anim!=nil then
   if coinvoke(self.anim) then
@@ -297,9 +362,7 @@ function seed:update()
    }
   )
 
-  if grid:fits(
-   t.x,t.y,t.r,self
-  ) then
+  if self:_tree_fits(t) then
    grid:add(t)
    self.anim=cowrap(
     "root",seedroot_anim,self,t
@@ -330,15 +393,6 @@ end
 
 function seed:draw()
  local y=ceil(self.y*yscale)
-
- --shadow
- --local shadow_w=max(
- -- 0,2-abs(self.si-4)
- --)
- --line(
- -- self.x,y,
- -- self.x+shadow_w,y,0
- --)
 
  --seed sprite
  pal(self.family.p)
