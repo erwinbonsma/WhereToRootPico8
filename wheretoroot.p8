@@ -6,12 +6,10 @@ seed_r=2.5
 tree_r=3
 branch_l=8
 yscale=0.8
-pal({
- [0]=-16,
- [5]=-11,
- [8]=-8,
- [10]=-5
-},1)
+seeddrop_h=6
+
+cellsz=16
+
 families={
  {x=23,y=31,p={
   --red
@@ -35,14 +33,41 @@ function vlen(dx,dy)
  return sqrt(dx*dx+dy*dy)
 end
 
+--wrap coroutine with a name to
+--facilitate debugging crashes
+function cowrap(
+ name,coroutine,...
+)
+ local w={
+  name=name,
+  coroutine=cocreate(coroutine),
+  args={...}
+ }
+ return w
+end
+
+--returns true when routine died
+function coinvoke(wrapped_cr)
+ local cr=wrapped_cr.coroutine
+ if not coresume(
+  cr,
+  wrapped_cr.args
+ ) then
+  printh(
+   "coroutine "..
+   wrapped_cr.name.." crashed"
+  )
+  while true do end
+ end
+ return costatus(cr)=="dead"
+end
+
 --class inheritance
 function extend(clz,baseclz)
  for k,v in pairs(baseclz) do
   clz[k]=v
  end
 end
-
-cellsz=16
 
 cellgrid={}
 function cellgrid:new(w,h)
@@ -199,6 +224,18 @@ function create_angles(n,dmin)
  return angles
 end
 
+function seeddrop_anim(args)
+ local seed=args[1]
+ seed.vh=0
+ while seed.h>0 do
+  seed.h-=seed.vh
+  seed.vh+=0.04
+  yield()
+ end
+ seed.h=0
+ seed.vh=nil
+end
+
 seed={}
 function seed:new(dx,dy,o)
  local o=setmetatable(o or {},self)
@@ -212,11 +249,19 @@ function seed:new(dx,dy,o)
  )/frate
  o.speed=o.speed or 0.1
  o.moving=true
+ o.anim=nil
 
  return o
 end
 
 function seed:update()
+ if self.anim!=nil then
+  if coinvoke(self.anim) then
+   self.anim=nil
+  end
+  return
+ end
+
  self.age+=self.growrate
 
  if self.age>1 then
@@ -256,7 +301,9 @@ end
 function seed:draw()
  pal(self.family.p)
  spr(
-  4,self.x-1,self.y*yscale-2
+  4,
+  self.x-1,
+  self.y*yscale-self.h-2
  )
  pal(0)
 end
@@ -295,6 +342,7 @@ function tree:_blossom()
   s.x=self.x+s.dx*branch_l
   s.y=self.y+s.dy*branch_l
   s.r=seed_r
+  s.h=seeddrop_h
   if hgrid:fits(s.x,s.y,s.r) then
    hgrid:add(s)
    add(self.seeds,s)
@@ -308,6 +356,9 @@ function tree:_dropseeds()
   if grid:fits(s.x,s.y,s.r) then
    grid:add(s)
    add(seeds,s)
+   s.anim=cowrap(
+    "seeddrop",seeddrop_anim,s
+   )
   end
  end
 end
@@ -380,7 +431,9 @@ function tree:draw_seeds()
 
  pal(self.family.p)
  for s in all(self.seeds) do
-  spr(si,s.x-1,s.y*yscale-8)
+  spr(
+   si,s.x-1,s.y*yscale-s.h-2
+  )
  end
  pal(0)
 end
@@ -397,7 +450,14 @@ function _init()
   add(trees,t)
   grid:add(t)
  end
+
  camera(-8,-16)
+ pal({
+  [0]=-16,
+  [5]=-11,
+  [8]=-8,
+  [10]=-5
+ },1)
 end
 
 function _update()
