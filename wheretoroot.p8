@@ -274,12 +274,22 @@ end
 
 function seeddrop_anim(args)
  local seed=args[1]
+ local kills=args[2]
+
  seed.vh=0
  while seed.h>0 do
   seed.vh-=0.04
   seed.h+=seed.vh
   yield()
+
+  if seed.h<4 and kills!=nil then
+   for kill in all(kills) do
+    kill.destroy=true
+   end
+   kills=nil
+  end
  end
+
  seed.h=0
  seed.vh=nil
 end
@@ -456,19 +466,20 @@ function tree:_dropseeds()
   hgrid:del(s)
 
   local fits=true
+  local kills={}
   local visitor=function(obj)
    --drop destroys seeds and
    --small trees
    if (
     getmetatable(obj)==seed
    ) then
-    obj.destroy=true
+    add(kills,obj)
    else
     assert(
      getmetatable(obj)==tree
     )
     if obj.age<0.25 then
-     obj.destroy=true
+     add(kills,obj)
     else
      --high tree prevents drop
      fits=false
@@ -483,7 +494,8 @@ function tree:_dropseeds()
    grid:add(s)
    add(seeds,s)
    s.anim=cowrap(
-    "seeddrop",seeddrop_anim,s
+    "seeddrop",seeddrop_anim,
+    s,kills
    )
   end
  end
