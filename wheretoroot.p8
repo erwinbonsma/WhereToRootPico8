@@ -34,9 +34,9 @@ families={
 }
 
 --sprite flags
---0: goal
---1: wall
---2: water
+flag_goal=0
+flag_wall=1
+flag_water=2
 
 function vlen(dx,dy)
  return sqrt(dx*dx+dy*dy)
@@ -94,6 +94,10 @@ function cellgrid:new(w,h)
  for i=1,o.ncols*o.nrows do
   add(o.cells,{})
  end
+
+ --map
+ o.mx=o.mx or 0
+ o.my=o.my or 0
 
  return o
 end
@@ -156,6 +160,45 @@ function cellgrid:_invalid_pos(
  )
 end
 
+function cellgrid:_maphit(
+ x,y,dx,dy,r
+)
+ if (dx==0 and dy==0) return true
+
+ local modx=x%cellsz
+ local mody=y%cellsz
+ if (
+  dx<0 and modx>=r
+ ) then
+  return false
+ end
+ if (
+  dx>0 and modx+r<=cellsz
+ ) then
+  return false
+ end
+
+ if (
+  dy<0 and mody>=r
+ ) then
+  return false
+ end
+ if (
+  dy>0 and mody+r<=cellsz
+ ) then
+  return false
+ end
+
+ return true
+end
+
+function cellgrid:_iswall(mx,my)
+ local si=mget(
+  self.mx+mx,self.my+my
+ )
+ return fget(si,flag_wall)
+end
+
 function cellgrid:_cellhit(
  ci,x,y,r,objx
 )
@@ -190,15 +233,45 @@ function cellgrid:_visit_hits(
  end
 end
 
+function cellgrid:hits_wall(
+ x,y,r
+)
+ local mx=flr(x/cellsz)
+ local my=flr(y/cellsz)
+ for dx=-1,1 do
+  for dy=-1,1 do
+   if self:_maphit(
+    x,y,dx,dy,r
+   ) and self:_iswall(
+    mx+dx,my+dy
+   ) then
+    return true
+   end
+  end
+ end
+
+ return false
+end
+
 function cellgrid:fits(x,y,r,objx)
  if self:_invalid_pos(x,y) then
   return false
  end
 
  local ci=self:_cellidx(x,y)
-
+ local mx=self.mx+flr(x/cellsz)
+ local my=self.my+flr(y/cellsz)
  for dx=-1,1 do
   for dy=-1,1 do
+   if (
+    dx!=0 or dy!=0
+   ) and self:_maphit(
+    x,y,dx,dy,r
+   ) and self:_iswall(
+    mx+dx,my+dy
+   ) then
+    return false
+   end
    if self:_cellhit(
     ci+dx+dy*self.ncols,
     x,y,r,objx
@@ -466,41 +539,55 @@ function tree:_blossom()
  end
 end
 
-function tree:_dropseeds()
- for s in all(self.seeds) do
-  hgrid:del(s)
+function tree:_can_drop(
+ s,kills
+)
+ if grid:hits_wall(
+  s.x,s.y,s.r
+ ) then
+  return false
+ end
 
-  local fits=true
-  local kills={}
-  local visitor=function(obj)
-   --drop destroys seeds and
-   --small trees
-   if (
-    getmetatable(obj)==seed
-   ) then
+ local fits=true
+ local visitor=function(obj)
+  --drop destroys seeds and
+  --small trees
+  if (
+   getmetatable(obj)==seed
+  ) then
+   add(kills,obj)
+  else
+   assert(
+    getmetatable(obj)==tree
+   )
+   if obj.age<0.25 then
     add(kills,obj)
    else
-    assert(
-     getmetatable(obj)==tree
-    )
-    if obj.age<0.25 then
-     add(kills,obj)
-    else
-     --high tree prevents drop
-     fits=false
-    end
+    --high tree prevents drop
+    fits=false
    end
   end
-  grid:visit_hits(
-   s.x,s.y,s.r,visitor
-  )
+ end
 
-  if fits then
-   grid:add(s)
-   add(seeds,s)
-   s.anim=cowrap(
+ grid:visit_hits(
+  s.x,s.y,s.r,visitor
+ )
+ return fits
+end
+
+function tree:_dropseeds()
+ for seed in all(self.seeds) do
+  hgrid:del(seed)
+
+  local kills={}
+  if self:_can_drop(
+   seed,kills
+  ) then
+   grid:add(seed)
+   add(seeds,seed)
+   seed.anim=cowrap(
     "seeddrop",seeddrop_anim,
-    s,kills
+    seed,kills
    )
   end
  end
