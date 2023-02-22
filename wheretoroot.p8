@@ -161,35 +161,20 @@ function cellgrid:_invalid_pos(
 end
 
 function cellgrid:_maphit(
- x,y,dx,dy,r
+ x,y,vx,vy,r
 )
- if (dx==0 and dy==0) return true
+ if (vx==0 and vy==0) return true
 
- local modx=x%cellsz
- local mody=y%cellsz
- if (
-  dx<0 and modx>=r
- ) then
-  return false
- end
- if (
-  dx>0 and modx+r<=cellsz
- ) then
-  return false
- end
+ local cz=cellsz
+ local mx=x%cz
+ local my=y%cz
+ --dx/dy is distance along axis
+ --to cell in dir specified by
+ --vx/vy
+ local dx=vx*((cz+vx*cz)/2-mx)
+ local dy=vy*((cz+vy*cz)/2-my)
 
- if (
-  dy<0 and mody>=r
- ) then
-  return false
- end
- if (
-  dy>0 and mody+r<=cellsz
- ) then
-  return false
- end
-
- return true
+ return (dx*dx+dy*dy < r*r)
 end
 
 function cellgrid:_iswall(mx,my)
@@ -736,7 +721,7 @@ function _draw()
  palt(0,false)
  palt(7,true)
  for i=0,17 do
-  map(0,i,0,i*6,16,1)
+  map(0,i,0,i*6-2,16,1)
  end
  pal(0)
  foreach(seeds,seed.draw)
