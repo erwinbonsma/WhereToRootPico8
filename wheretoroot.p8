@@ -99,6 +99,11 @@ function cellgrid:new(w,h)
  o.mx=o.mx or 0
  o.my=o.my or 0
 
+ o.sorted_head={}
+ for i=1,cellsz do
+  add(o.sorted_head,0)
+ end
+
  return o
 end
 
@@ -288,6 +293,38 @@ function cellgrid:visit_hits(
  end
 end
 
+function cellgrid:draw_row(row)
+ local sh=self.sorted_head
+ for i=1,cellsz do
+  sh[i]=0
+ end
+
+ --add to rows
+ local ci=self:_cellidx(
+  0,row*cellsz
+ )
+ for i=0,self.ncols-2 do
+  for unit in all(
+   self.cells[ci+i]
+  ) do
+   local idx=1+flr(
+    unit.y%cellsz
+   )
+   unit._nxt=sh[idx]
+   sh[idx]=unit
+  end
+ end
+
+ --draw each row
+ for i=1,cellsz do
+  local unit=sh[i]
+  while unit!=0 do
+   unit:draw()
+   unit=unit._nxt
+  end
+ end
+end
+
 function create_angles(n,dmin)
  local angles={}
  -- first angle is always zero
@@ -380,7 +417,7 @@ function seedroot_anim(args)
 
  if seed:_tree_fits(tree) then
   grid:add(tree)
-  add(trees,tree)
+  add(units,tree)
  end
 
  seed.destroy=true
@@ -516,12 +553,14 @@ function tree:_blossom()
   s.x=self.x+s.dx*branch_l
   s.y=self.y+s.dy*branch_l
   s.r=seed_r
-  s.h=seeddrop_h
   if hgrid:fits(s.x,s.y,s.r) then
+   s.h=seeddrop_h
+   s.si=1
    hgrid:add(s)
    add(self.seeds,s)
   end
  end
+ self.seed_si=1
 end
 
 function tree:_can_drop(
@@ -569,7 +608,7 @@ function tree:_dropseeds()
    seed,kills
   ) then
    grid:add(seed)
-   add(seeds,seed)
+   add(units,seed)
    seed.anim=cowrap(
     "seeddrop",seeddrop_anim,
     seed,kills
@@ -585,11 +624,21 @@ function tree:update()
 
  self.age+=self.growrate
 
- if (
-  self.age>=0.7 and
-  self.seeds==nil
- ) then
+ if (self.age<0.7) return
+
+ if self.seeds==nil then
   self:_blossom()
+  return
+ end
+
+ local seed_si=max(1,min(4,ceil(
+  (self.age-0.7)/0.3*5
+ )))
+ if seed_si!=self.seed_si then
+  for s in all(self.seeds) do
+   s.si=seed_si
+  end
+  self.seed_si=seed_si
  end
 
  if (self.age<1) return
@@ -604,7 +653,8 @@ tree_sprites={
  224,226,228,230,232,234
 }
 
-function tree:draw_trunk()
+--draws the trunk
+function tree:draw()
  local h=flr(
   min(self.age,0.25)*4*tree_h
  )
@@ -643,28 +693,12 @@ function tree:draw_crown()
  pal(0)
 end
 
-function tree:draw_seeds()
- local si=min(4,ceil(
-  (self.age-0.70)/0.3*5
- ))
-
- if (si<=0) return
-
- pal(self.family.p)
- for s in all(self.seeds) do
-  s.si=si
-  s:draw()
- end
- pal(0)
-end
-
 function _init()
  local lowrez=false
 
  grid=cellgrid:new()
  hgrid=cellgrid:new()
- trees={}
- seeds={}
+ units={}
  for f in all(families) do
   local x=f.x
   local y=f.y
@@ -676,7 +710,7 @@ function _init()
   t=tree:new(x,y,{
    family=f
   })
-  add(trees,t)
+  add(units,t)
   grid:add(t)
  end
 
@@ -697,37 +731,40 @@ function _init()
 end
 
 function _update()
- for i=#trees,1,-1 do
-  local destroy=trees[i]:update()
+ for i=#units,1,-1 do
+  local destroy=units[i]:update()
   if destroy then
-   grid:del(trees[i])
-   trees[i]=trees[#trees]
-   deli(trees,#trees)
-  end
- end
-
- for i=#seeds,1,-1 do
-  local destroy=seeds[i]:update()
-  if destroy then
-   grid:del(seeds[i])
-   seeds[i]=seeds[#seeds]
-   deli(seeds,#seeds)
+   grid:del(units[i])
+   units[i]=units[#units]
+   deli(units,#units)
   end
  end
 end
 
 function _draw()
  cls(1)
- palt(0,false)
- palt(7,true)
- for i=0,17 do
-  map(0,i,0,i*6-2,16,1)
+
+ --draw map and units on ground
+ for row=0,17 do
+  palt(7,true)
+  palt(0,false)
+  map(0,row,0,row*6-2,16,1)
+  pal(0)
+
+  grid:draw_row(row)
  end
- pal(0)
- foreach(seeds,seed.draw)
- foreach(trees,tree.draw_trunk)
- foreach(trees,tree.draw_crown)
- foreach(trees,tree.draw_seeds)
+
+ --draw tree tops
+ for unit in all(units) do
+  if getmetatable(unit)==tree then
+   unit:draw_crown()
+  end
+ end
+
+ --draw seeds on top of trees
+ for row=0,17 do
+  hgrid:draw_row(row)
+ end
 end
 
 __gfx__
