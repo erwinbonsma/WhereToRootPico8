@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
--- where to root? v0.1.1
+-- where to root? v0.2
 -- (c) 2023  eriban
 
 frate=30
