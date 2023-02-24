@@ -396,25 +396,48 @@ function create_angles(n,dmin)
 end
 
 function seeddrop_anim(args)
- local seed=args[1]
+ local s=args[1]
  local kills=args[2]
 
- seed.vh=0
- while seed.h>0 do
-  seed.vh-=0.04
-  seed.h+=seed.vh
+ s.vh=0
+ while s.h>0 do
+  s.vh-=0.04
+  s.h+=s.vh
   yield()
 
-  if seed.h<4 and kills!=nil then
+  if s.h<4 and kills!=nil then
    for kill in all(kills) do
-    kill.destroy=true
+    if (
+     getmetatable(kill)==seed
+    ) then
+     kill.anim=cowrap(
+      "seedsquash",
+      seedsquash_anim,kill
+     )
+    else
+     kill.destroy=true
+    end
    end
    kills=nil
   end
  end
 
- seed.h=0
- seed.vh=nil
+ s.h=0
+ s.vh=nil
+end
+
+function seedsquash_anim(args)
+ local seed=args[1]
+
+ seed.si=8
+ wait(4)
+
+ while seed.si<10 do
+  seed.si+=1
+  wait(4)
+ end
+
+ seed.destroy=true
 end
 
 function seedsplat_anim(args)
@@ -429,15 +452,8 @@ function seedsplat_anim(args)
 
  seed.h=2
  seed.vh=nil
- seed.si=8
- wait(4)
 
- while seed.si<10 do
-  seed.si+=1
-  wait(4)
- end
-
- seed.destroy=true
+ seedsquash_anim({seed})
 end
 
 function seedroot_anim(args)
@@ -569,7 +585,7 @@ function tree:new(x,y,o)
  o.x=x
  o.y=y
  o.r=o.r or tree_r
- o.growrate=0.05/frate
+ o.growrate=0.25/frate
  o.maxseeds=o.maxseeds or 3
 
  o.age=0
@@ -581,7 +597,7 @@ end
 function tree:_blossom()
  self.seeds={}
  local angles=create_angles(
-  self.maxseeds,0.2
+  self.maxseeds,0.15
  )
 
  for a in all(angles) do
