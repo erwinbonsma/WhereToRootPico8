@@ -85,12 +85,12 @@ function extend(clz,baseclz)
 end
 
 cellgrid={}
-function cellgrid:new(w,h)
- local o=setmetatable({},self)
+function cellgrid:new(o)
+ local o=setmetatable(o or {},self)
  self.__index=self
 
- o.w=w or 128
- o.h=h or 144
+ o.w=o.w or 128
+ o.h=o.h or 144
  --extra empty col to facilitate
  --left and right neighbour
  --checks at edge of grid
@@ -100,10 +100,6 @@ function cellgrid:new(w,h)
  for i=1,o.ncols*o.nrows do
   add(o.cells,{})
  end
-
- --map
- o.mx=o.mx or 0
- o.my=o.my or 0
 
  o.sorted_head={}
  for i=1,cellsz do
@@ -249,14 +245,14 @@ function cellgrid:hits_wall(
  return false
 end
 
-function cellgrid:fits(x,y,r,objx)
- if self:_invalid_pos(x,y) then
-  return false
- end
+function cellgrid:_fits_map(
+ x,y,r
+)
+ if (self.mx==nil) return true
 
- local ci=self:_cellidx(x,y)
  local mx=self.mx+flr(x/cellsz)
  local my=self.my+flr(y/cellsz)
+
  for dx=-1,1 do
   for dy=-1,1 do
    if (
@@ -268,6 +264,24 @@ function cellgrid:fits(x,y,r,objx)
    ) then
     return false
    end
+  end
+ end
+
+ return true
+end
+
+function cellgrid:fits(x,y,r,objx)
+ if self:_invalid_pos(x,y) then
+  return false
+ end
+
+ if not self:_fits_map(x,y,r) then
+  return false
+ end
+
+ local ci=self:_cellidx(x,y)
+ for dx=-1,1 do
+  for dy=-1,1 do
    if self:_cellhit(
     ci+dx+dy*self.ncols,
     x,y,r,objx
@@ -567,7 +581,7 @@ end
 function tree:_blossom()
  self.seeds={}
  local angles=create_angles(
-  self.maxseeds,0.15
+  self.maxseeds,0.2
  )
 
  for a in all(angles) do
@@ -728,7 +742,9 @@ end
 function _init()
  local lowrez=false
 
- grid=cellgrid:new()
+ grid=cellgrid:new(
+  {mx=0,my=0}
+ )
  hgrid=cellgrid:new()
  units={}
  for f in all(families) do
