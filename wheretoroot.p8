@@ -7,6 +7,7 @@ __lua__
 frate=30
 seed_r=2.5
 tree_r=3
+max_r=max(seed_r,tree_r)
 tree_h=5
 branch_l=8
 yscale=0.75
@@ -91,79 +92,109 @@ function cellgrid:new(o)
 
  o.w=o.w or 128
  o.h=o.h or 144
- --extra empty col to facilitate
- --left and right neighbour
- --checks at edge of grid
- o.ncols=ceil(o.w/cellsz)+1
- o.nrows=ceil(o.h/cellsz)
- o.cells={}
- for i=1,o.ncols*o.nrows do
-  add(o.cells,{})
- end
 
- o.sorted_head={}
- for i=1,cellsz do
-  add(o.sorted_head,0)
- end
+ o.head={
+  x=0,y=-max_r*2,r=0
+ }
+ o.tail={
+  x=0,y=o.h+max_r*2,r=0
+ }
+ o.head._nxt=o.tail
+ o.tail._prv=o.head
 
  return o
 end
 
-function cellgrid:_cellidx(x,y)
- --starts at one
- return 1+(
-  (x\cellsz)+
-  (y\cellsz)*self.ncols
+--insert obj into linked list,
+--after prev
+function cellgrid:_insert(
+ prev,obj
+)
+ assert(
+  obj._nxt==nil and
+  obj._prv==nil
  )
+ assert(
+  prev.y<=obj.y and
+  obj.y<=prev._nxt.y
+ )
+
+ obj._nxt=prev._nxt
+ obj._prv=prev
+ obj._nxt._prv=obj
+ prev._nxt=obj
 end
 
-function cellgrid:_add(obj,ci)
- assert(obj.cellidx==nil)
+function cellgrid:_obj_before_y(
+ y,start_at
+)
+ local prev=start_at
+ if prev==nil then
+  if y<self.h/2 then
+   prev=self.head
+  else
+   prev=self.tail._prv
+  end
+ end
+
+ while prev._nxt.y<y do
+  prev=prev._nxt
+ end
+ while prev.y>y do
+  prev=prev._prv
+ end
+
  assert(
-  ci%self.ncols!=0,
-  "cannot add to wrapping col"
+  prev.y<=y and prev._nxt.y>=y
  )
- add(self.cells[ci],obj)
- obj.cellidx=ci
+ return prev
 end
 
 function cellgrid:add(obj)
- self:_add(
-  obj,self:_cellidx(obj.x,obj.y)
+ self:_insert(
+  self:_obj_before_y(obj.y),obj
  )
 end
 
 function cellgrid:del(obj)
- local cells=self.cells
- local objd=del(
-  cells[obj.cellidx],obj
+ assert(
+  obj._nxt!=nil and
+  obj._prv!=nil
  )
- assert(objd==obj)
- obj.cellidx=nil
+ assert(
+  obj._prv._nxt==obj and
+  obj._nxt._prv==obj
+ )
+ obj._prv._nxt=obj._nxt
+ obj._nxt._prv=obj._prv
+ obj._prv=nil
+ obj._nxt=nil
 end
 
 function cellgrid:moved(obj)
- local ci=self:_cellidx(
-  obj.x,obj.y
- )
- if ci!=obj.cellidx then
-  self:del(obj)
-  self:_add(obj,ci)
+ if (
+  obj._prv.y<=obj.y and
+  obj._nxt.y>=obj.y
+ ) then
+  --position in linked-list
+  --remains unchanged
+  return
  end
-end
 
-function cellgrid:_invalid_idx(
- ci
-)
- return ci<1 or ci>#self.cells
+ local start_at=obj._prv
+ self:del(obj)
+ local prev=self:_obj_before_y(
+  obj.y,start_at
+ )
+ self:_insert(prev,obj)
 end
 
 function cellgrid:_invalid_pos(
  x,y
 )
  return (
-  x<0 or x>self.w-1 or
-  y<0 or y>self.h-1
+  x<0 or x>=self.w or
+  y<0 or y>=self.h
  )
 end
 
@@ -203,40 +234,6 @@ function cellgrid:_iswall(mx,my)
  return self:_maphasflag(
   mx,my,flag_wall
  )
-end
-
-function cellgrid:_cellhit(
- ci,x,y,r,objx
-)
- if self:_invalid_idx(ci) then
-  return false
- end
-
- for obj in all(self.cells[ci]) do
-  if obj!=objx then
-   local d=vlen(x-obj.x,y-obj.y)
-   if d<obj.r+r then
-    return true
-   end
-  end
- end
-
- return false
-end
-
-function cellgrid:_visit_hits(
- ci,x,y,r,visitor
-)
- if self:_invalid_idx(ci) then
-  return
- end
-
- for obj in all(self.cells[ci]) do
-  local d=vlen(x-obj.x,y-obj.y)
-  if d<obj.r+r then
-   visitor(obj)
-  end
- end
 end
 
 function cellgrid:iswater(x,y)
@@ -321,79 +318,103 @@ function cellgrid:_fits_map(
  return true
 end
 
-function cellgrid:fits(x,y,r,objx)
- if self:_invalid_pos(x,y) then
-  return false
- end
-
- if not self:_fits_map(x,y,r) then
-  return false
- end
-
- local ci=self:_cellidx(x,y)
- for dx=-1,1 do
-  for dy=-1,1 do
-   if self:_cellhit(
-    ci+dx+dy*self.ncols,
-    x,y,r,objx
-   ) then
-    return false
-   end
-  end
- end
- 
- return true
-end
-
+--visits all objects that an
+--object at position (x,y) with
+--radius r hits.
+-- when objx is provided, it is
+--the starting point for the
+--search but excluded
+-- search is aborted when the
+--visitor return true
 function cellgrid:visit_hits(
- x,y,r,visitor
+ x,y,r,visitor,objx
 )
  if self:_invalid_pos(x,y) then
   return
  end
 
- local ci=self:_cellidx(x,y)
-
- for dx=-1,1 do
-  for dy=-1,1 do
-   self:_visit_hits(
-    ci+dx+dy*self.ncols,
-    x,y,r,visitor
-   )
+ local obj=self:_obj_before_y(
+  y-r-max_r,objx
+ )
+ local maxy=y+r+max_r
+ while obj.y<=maxy do
+  if obj!=objx then
+   if (
+    vlen(x-obj.x,y-obj.y)
+    <obj.r+r
+   ) then
+    if (visitor(obj)) return
+   end
   end
+  obj=obj._nxt
  end
 end
 
-function cellgrid:draw_row(row)
- local sh=self.sorted_head
- for i=1,cellsz do
-  sh[i]=0
+function cellgrid:fits(
+ x,y,r,objx
+)
+ if (
+  self:_invalid_pos(x,y) or
+  not self:_fits_map(x,y,r)
+ ) then
+  return false
  end
 
- --add to rows
- local ci=self:_cellidx(
-  0,row*cellsz
+ local fits=true
+ local visitor=function(obj)
+  fits=false
+  return true --abort search
+ end
+
+ self:visit_hits(
+  x,y,r,visitor,objx
  )
- for i=0,self.ncols-2 do
-  for unit in all(
-   self.cells[ci+i]
-  ) do
-   local idx=1+flr(
-    unit.y%cellsz
-   )
-   unit._nxt=sh[idx]
-   sh[idx]=unit
-  end
+
+ return fits
+end
+
+function cellgrid:update_units()
+ local unit=self.head._nxt
+
+ while unit!=self.tail do
+  local destroy=unit:update()
+  local nxt=unit._nxt
+
+  if (destroy) self:del(unit)
+
+  unit=nxt
+ end
+end
+
+function cellgrid:visit_units(
+ visitor
+)
+ local unit=self.head._nxt
+
+ while unit!=self.tail do
+  visitor(unit)
+  unit=unit._nxt
+ end
+end
+
+--draws all units with y<maxy
+--ordered by their y position.
+--starts from start_unit (or
+--first unit if nil).
+--return first unit with y>=maxy
+function cellgrid:draw_units(
+ start_unit,maxy
+)
+ local unit=(
+  start_unit or self.head._nxt
+ )
+
+ while unit.y<maxy do
+  unit:draw()
+  unit=unit._nxt
  end
 
- --draw each row
- for i=1,cellsz do
-  local unit=sh[i]
-  while unit!=0 do
-   unit:draw()
-   unit=unit._nxt
-  end
- end
+ return unit
 end
 
 function create_angles(n,dmin)
@@ -560,7 +581,6 @@ function seedroot_anim(args)
 
  if seed:_tree_fits(tree) then
   grid:add(tree)
-  add(units,tree)
  end
 
  seed.destroy=true
@@ -597,7 +617,7 @@ function seed:_tree_fits(t)
  end
 
  grid:visit_hits(
-  t.x,t.y,t.r,visitor
+  t.x,t.y,t.r,visitor,self
  )
 
  return fits
@@ -747,6 +767,7 @@ function tree:_can_drop(
  grid:visit_hits(
   s.x,s.y,s.r,visitor
  )
+
  return fits
 end
 
@@ -770,7 +791,6 @@ function tree:_dropseeds()
   end
 
   grid:add(seed)
-  add(units,seed)
  end
 end
 
@@ -857,7 +877,6 @@ function _init()
   {mx=0,my=0}
  )
  hgrid=cellgrid:new()
- units={}
  for f in all(families) do
   local x=f.x
   local y=f.y
@@ -869,7 +888,6 @@ function _init()
   t=tree:new(x,y,{
    family=f
   })
-  add(units,t)
   grid:add(t)
  end
 
@@ -891,13 +909,12 @@ function _init()
 end
 
 function _update()
- for i=#units,1,-1 do
-  local destroy=units[i]:update()
-  if destroy then
-   grid:del(units[i])
-   units[i]=units[#units]
-   deli(units,#units)
-  end
+ grid:update_units()
+end
+
+function draw_treetop(unit)
+ if getmetatable(unit)==tree then
+  unit:draw_crown()
  end
 end
 
@@ -905,26 +922,23 @@ function _draw()
  cls(1)
 
  --draw map and units on ground
+ local drawunit=nil
  for row=0,17 do
   palt(7,true)
   palt(0,false)
   map(0,row,0,row*6-2,16,1)
   pal(0)
 
-  grid:draw_row(row)
+  drawunit=grid:draw_units(
+   drawunit,row*cellsz
+  )
  end
 
  --draw tree tops
- for unit in all(units) do
-  if getmetatable(unit)==tree then
-   unit:draw_crown()
-  end
- end
+ grid:visit_units(draw_treetop)
 
  --draw seeds on top of trees
- for row=0,17 do
-  hgrid:draw_row(row)
- end
+ hgrid:draw_units(nil,hgrid.h)
 end
 
 __gfx__
