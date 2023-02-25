@@ -5,7 +5,7 @@ __lua__
 -- (c) 2023  eriban
 
 frate=30
-seed_r=2.5
+seed_r=2.2
 tree_r=3
 max_r=max(seed_r,tree_r)
 tree_h=5
@@ -886,21 +886,14 @@ end
 --main
 
 function _init()
- local lowrez=true
+ local lowrez=false
 
  grid=cellgrid:new(
   {mx=0,my=0}
  )
  hgrid=cellgrid:new()
  for f in all(families) do
-  local x=f.x
-  local y=f.y
---  if lowrez then
---   x=(x-60)/2+60
---   y=(y-60)/2+64
---  end
-
-  t=tree:new(x,y,{
+  t=tree:new(f.x,f.y,{
    family=f
   })
   grid:add(t)
@@ -945,7 +938,7 @@ function _draw()
   pal(0)
 
   drawunit=grid:draw_units(
-   drawunit,row*cellsz
+   drawunit,(row+1)*cellsz
   )
  end
 
