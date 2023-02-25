@@ -85,6 +85,9 @@ function extend(clz,baseclz)
  end
 end
 
+-->8
+--cellgrid
+
 cellgrid={}
 function cellgrid:new(o)
  local o=setmetatable(o or {},self)
@@ -417,55 +420,8 @@ function cellgrid:draw_units(
  return unit
 end
 
-function create_angles(n,dmin)
- local angles={}
- -- first angle is always zero
-
- while #angles<n-1 do
-  --find range of options
-  local r=0
-  local ap=0
-  for a in all(angles) do
-   r+=max(0,a-ap-dmin*2)
-   ap=a
-  end
-  r+=max(0,1-ap-dmin*2)
-
-  if r==0 then
-   -- no room remaining
-   return
-  end
-
-  local v=rnd(r)
-
-  local insertpos
-  local ap=0
-  for i,a in pairs(angles) do
-   local w=max(0,a-ap-dmin*2)
-   if v<w then
-    insertpos=i
-		  break
-   end
-   v-=w
-   ap=a
-  end
-  local angle=ap+v+dmin
-  if insertpos!=nil then
-   add(angles,angle,insertpos)
-  else
-   add(angles,angle)
-  end
- end
-
- add(angles,0)
- local offset=rnd(1)
- for i=1,#angles do
-  angles[i]+=offset
-  angles[i]-=flr(angles[i])
- end
-
- return angles
-end
+-->8
+--animations
 
 function seeddrop_anim(args)
  local s=args[1]
@@ -586,6 +542,9 @@ function seedroot_anim(args)
  seed.destroy=true
 end
 
+-->8
+--seed
+
 seed={}
 function seed:new(dx,dy,o)
  local o=setmetatable(o or {},self)
@@ -690,6 +649,59 @@ function seed:draw()
   flr(self.y*yscale)-self.h-5
  )
  pal(0)
+end
+
+-->8
+--tree
+
+function create_angles(n,dmin)
+ local angles={}
+ -- first angle is always zero
+
+ while #angles<n-1 do
+  --find range of options
+  local r=0
+  local ap=0
+  for a in all(angles) do
+   r+=max(0,a-ap-dmin*2)
+   ap=a
+  end
+  r+=max(0,1-ap-dmin*2)
+
+  if r==0 then
+   -- no room remaining
+   return
+  end
+
+  local v=rnd(r)
+
+  local insertpos
+  local ap=0
+  for i,a in pairs(angles) do
+   local w=max(0,a-ap-dmin*2)
+   if v<w then
+    insertpos=i
+		  break
+   end
+   v-=w
+   ap=a
+  end
+  local angle=ap+v+dmin
+  if insertpos!=nil then
+   add(angles,angle,insertpos)
+  else
+   add(angles,angle)
+  end
+ end
+
+ add(angles,0)
+ local offset=rnd(1)
+ for i=1,#angles do
+  angles[i]+=offset
+  angles[i]-=flr(angles[i])
+ end
+
+ return angles
 end
 
 tree={}
@@ -870,8 +882,11 @@ function tree:draw_crown()
  pal(0)
 end
 
+-->8
+--main
+
 function _init()
- local lowrez=false
+ local lowrez=true
 
  grid=cellgrid:new(
   {mx=0,my=0}
@@ -880,10 +895,10 @@ function _init()
  for f in all(families) do
   local x=f.x
   local y=f.y
-  if lowrez then
-   x=(x-60)/2+60
-   y=(y-60)/2+64
-  end
+--  if lowrez then
+--   x=(x-60)/2+60
+--   y=(y-60)/2+64
+--  end
 
   t=tree:new(x,y,{
    family=f
@@ -902,7 +917,7 @@ function _init()
 
  if lowrez then
   poke(0x5f2c,3)
-  camera(-8+32,-16+32)
+  camera(8,40)
  else
   camera(0,-16)
  end
