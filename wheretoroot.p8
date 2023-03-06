@@ -78,6 +78,14 @@ function wait(steps)
  end
 end
 
+function istree(obj)
+ return getmetatable(obj)==tree
+end
+
+function isseed(obj)
+ return getmetatable(obj)==seed
+end
+
 --class inheritance
 function extend(clz,baseclz)
  for k,v in pairs(baseclz) do
@@ -104,6 +112,8 @@ function cellgrid:new(o)
  }
  o.head._nxt=o.tail
  o.tail._prv=o.head
+
+ o.observers={}
 
  return o
 end
@@ -153,13 +163,7 @@ function cellgrid:_obj_before_y(
  return prev
 end
 
-function cellgrid:add(obj)
- self:_insert(
-  self:_obj_before_y(obj.y),obj
- )
-end
-
-function cellgrid:del(obj)
+function cellgrid:_remove(obj)
  assert(
   obj._nxt!=nil and
   obj._prv!=nil
@@ -174,6 +178,30 @@ function cellgrid:del(obj)
  obj._nxt=nil
 end
 
+function cellgrid:add_observer(
+ observer
+)
+ add(self.observers,observer)
+end
+
+function cellgrid:add(obj)
+ self:_insert(
+  self:_obj_before_y(obj.y),obj
+ )
+
+ for o in all(self.observers) do
+  o:unit_added(obj)
+ end
+end
+
+function cellgrid:del(obj)
+ self:_remove(obj)
+
+ for o in all(self.observers) do
+  o:unit_removed(obj)
+ end
+end
+
 function cellgrid:moved(obj)
  if (
   obj._prv.y<=obj.y and
@@ -185,7 +213,7 @@ function cellgrid:moved(obj)
  end
 
  local start_at=obj._prv
- self:del(obj)
+ self:_remove(obj)
  local prev=self:_obj_before_y(
   obj.y,start_at
  )
@@ -420,6 +448,86 @@ function cellgrid:draw_units(
  return unit
 end
 
+--creates a function that checks
+--if a grid cell coordinate is
+--inside a given rectangle
+function rectgoal(x0,y0,w,h)
+ return function(x,y)
+  return (
+   x>=x0 and x<x0+w and
+   y>=y0 and y<y0+h
+  )
+ end
+end
+
+areagoal={}
+function areagoal:new(areas,o)
+ local o=setmetatable(o or {},self)
+ self.__index=self
+
+ o.areas=areas
+ o.counts={}
+ for f in all(families) do
+  local fc={}
+  for area in all(areas) do
+   fc[area]=0
+  end
+  o.counts[f]=fc
+ end
+
+ return o
+end
+
+function areagoal:observe(grid)
+ grid:add_observer(self)
+end
+
+function areagoal:unit_added(
+ unit
+)
+ if (not istree(unit)) return
+
+ local c=self.counts
+ local cellx=unit.x/cellsz
+ local celly=unit.y/cellsz
+ for area in all(self.areas) do
+  if area(cellx,celly) then
+   c[unit.family][area]+=1
+   unit.area=area
+   return
+  end
+ end
+
+ unit.area=nil
+end
+
+function areagoal:unit_removed(
+ unit
+)
+ local c=self.counts
+ if unit.area!=nil then
+  c[unit.family][unit.area]-=1
+  unit.area=nil
+ end
+end
+
+function areagoal:draw()
+ local x=10
+ local y=-14
+ local c=self.counts
+ for family in all(families) do
+  pal(family.p)
+  spr(4,x,y-1)
+  x+=7
+  local s=""
+  for area in all(self.areas) do
+   print(c[family][area],x,y,6)
+   x+=4
+  end
+  x+=4
+  pal(0)
+ end
+end
 -->8
 --animations
 
@@ -435,9 +543,7 @@ function seeddrop_anim(args)
 
   if s.h<4 and kills!=nil then
    for kill in all(kills) do
-    if (
-     getmetatable(kill)==seed
-    ) then
+    if isseed(kill) then
      kill.anim=cowrap(
       "seedsquash",
       seedsquash_anim,kill
@@ -570,7 +676,7 @@ end
 function seed:_tree_fits(t)
  local fits=true
  local visitor=function(obj)
-  if getmetatable(obj)==tree then
+  if istree(obj) then
    fits=false
   end
  end
@@ -712,7 +818,7 @@ function tree:new(x,y,o)
  o.x=x
  o.y=y
  o.r=o.r or tree_r
- o.growrate=0.25/frate
+ o.growrate=0.05/frate
  o.maxseeds=o.maxseeds or 3
 
  o.age=0
@@ -759,14 +865,10 @@ function tree:_can_drop(
  local visitor=function(obj)
   --drop destroys seeds and
   --small trees
-  if (
-   getmetatable(obj)==seed
-  ) then
+  if isseed(obj) then
    add(kills,obj)
   else
-   assert(
-    getmetatable(obj)==tree
-   )
+   assert(istree(obj))
    if obj.age<0.25 then
     add(kills,obj)
    else
@@ -888,9 +990,16 @@ end
 function _init()
  local lowrez=false
 
+ goal=areagoal:new({
+  rectgoal(3,3,4,4),
+  rectgoal(9,5,4,4),
+  rectgoal(3,9,4,4),
+  rectgoal(9,11,4,4),
+ })
  grid=cellgrid:new(
   {mx=0,my=0}
  )
+ goal:observe(grid)
  hgrid=cellgrid:new()
  for f in all(families) do
   t=tree:new(f.x,f.y,{
@@ -921,7 +1030,7 @@ function _update()
 end
 
 function draw_treetop(unit)
- if getmetatable(unit)==tree then
+ if istree(unit) then
   unit:draw_crown()
  end
 end
@@ -947,6 +1056,8 @@ function _draw()
 
  --draw seeds on top of trees
  hgrid:draw_units(nil,hgrid.h)
+
+ goal:draw()
 end
 
 __gfx__
