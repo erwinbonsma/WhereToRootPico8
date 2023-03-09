@@ -474,6 +474,7 @@ function areagoal:new(areas,o)
   end
   o.counts[f]=fc
  end
+ o.winner=nil
 
  return o
 end
@@ -482,18 +483,34 @@ function areagoal:observe(grid)
  grid:add_observer(self)
 end
 
+function areagoal:_is_done(
+ counts
+)
+ for area in all(self.areas) do
+  if (counts[area]==0) return false
+ end
+ return true
+end
+
 function areagoal:unit_added(
  unit
 )
  if (not istree(unit)) return
 
- local c=self.counts
+ local family=unit.family
  local cellx=unit.x/cellsz
  local celly=unit.y/cellsz
  for area in all(self.areas) do
   if area(cellx,celly) then
-   c[unit.family][area]+=1
+   local cf=self.counts[family]
+   cf[area]+=1
    unit.area=area
+   if (
+    cf[area]==1 and
+    self:_is_done(cf)
+   ) then
+    self.winner=family
+   end
    return
   end
  end
@@ -519,7 +536,6 @@ function areagoal:draw()
   pal(family.p)
   spr(4,x,y-1)
   x+=7
-  local s=""
   for area in all(self.areas) do
    print(c[family][area],x,y,6)
    x+=4
@@ -1026,7 +1042,9 @@ function _init()
 end
 
 function _update()
- grid:update_units()
+ if goal.winner==nil then
+  grid:update_units()
+ end
 end
 
 function draw_treetop(unit)
