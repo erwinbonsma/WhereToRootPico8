@@ -14,6 +14,8 @@ yscale=0.75
 seeddrop_h=6
 
 cellsz=8
+roots_r=16
+max_growrate=0.05/frate
 
 families={
  {x=39,y=39,p={
@@ -105,10 +107,10 @@ function cellgrid:new(o)
  o.h=o.h or 144
 
  o.head={
-  x=0,y=-max_r*2,r=0
+  x=0,y=-100,r=0
  }
  o.tail={
-  x=0,y=o.h+max_r*2,r=0
+  x=0,y=o.h+100,r=0
  }
  o.head._nxt=o.tail
  o.tail._prv=o.head
@@ -834,10 +836,11 @@ function tree:new(x,y,o)
  o.x=x
  o.y=y
  o.r=o.r or tree_r
- o.growrate=0.05/frate
  o.maxseeds=o.maxseeds or 3
 
  o.age=0
+ o.rate_refresh=0
+
  o.seeds=nil
 
  return o
@@ -924,11 +927,33 @@ function tree:_dropseeds()
  end
 end
 
+function tree:_update_growrate()
+ local c=1 --crowdedness
+ local visitor=function(obj)
+  if istree(obj) then
+   local d=vlen(
+    obj.x-self.x,obj.y-self.y
+   )
+   c+=max(roots_r-d,0)/roots_r
+  end
+ end
+ grid:visit_hits(
+  self.x,self.y,roots_r,
+  visitor,self
+ )
+
+ self.growrate=max_growrate/c
+end
+
 function tree:update()
  if self.destroy then
   return true
  end
 
+ if self.age>=self.rate_refresh then
+  self:_update_growrate()
+  self.rate_refresh+=0.1
+ end
  self.age+=self.growrate
 
  if (self.age<0.7) return
