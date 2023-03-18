@@ -674,7 +674,6 @@ function seedrot_anim(args)
  s.destroy=true
 end
 
-
 -->8
 --seed
 
@@ -1232,10 +1231,6 @@ function hplayer:update()
  end
 end
 
-function hplayer:draw()
- print(""..#self.seeds,0,0,7)
-end
-
 --computer player
 cplayer={}
 extend(cplayer,player)
@@ -1245,9 +1240,39 @@ function cplayer:new(o)
  o=player.new(self,o)
  setmetatable(o,self)
 
+ o.switch_count=0
+ o.selected_idx=1
+ o:_nxt_rooting()
+
  return o
 end
 
+function cplayer:_nxt_rooting()
+ self.root_age=0.2+rnd(0.7)
+end
+
+function cplayer:update()
+ local ns=#self.seeds
+ if (ns==0) return
+
+ self.switch_count-=1
+ if self.switch_count<0 then
+  self.selected_idx+=1
+  self.switch_count=15
+ end
+
+ if self.selected_idx>ns then
+  self.selected_idx=1
+ end
+
+ local s=self.seeds[
+  self.selected_idx
+ ]
+ if s.age>=self.root_age then
+  s:root()
+  self:_nxt_rooting()
+ end
+end
 
 -->8
 --main
@@ -1266,18 +1291,21 @@ function _init()
  )
  grid:add_observer(goal)
  hgrid=cellgrid:new()
+ players={}
  for f in all(families) do
-  t=tree:new(f.x,f.y,{
-   family=f
-  })
+  t=tree:new(f.x,f.y,{family=f})
   grid:add(t)
   t.age=0.9
- end
 
- plyr=hplayer:new({
-  family=families[1]
- })
- grid:add_observer(plyr)
+  local plyr={family=f}
+  if #players==0 then
+   plyr=hplayer:new(plyr)
+  else
+   plyr=cplayer:new(plyr)
+  end
+  add(players,plyr)
+  grid:add_observer(plyr)
+ end
 
  pal({
   [1]=-16,--dark brown (bg)
@@ -1300,7 +1328,9 @@ function _update()
  if goal.winner==nil then
   grid:update_units()
 
-  plyr:update()
+  for p in all(players) do
+   p:update()
+  end
  end
 end
 
@@ -1333,7 +1363,6 @@ function _draw()
  hgrid:draw_units(nil,hgrid.h)
 
  goal:draw()
- plyr:draw()
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
