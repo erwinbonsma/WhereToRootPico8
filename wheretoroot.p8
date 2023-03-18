@@ -716,20 +716,26 @@ function seed:_tree_fits(t)
 end
 
 function seed:root()
- if (self.rooting) return
+ if (
+  self.anim==nil or
+  self.rotting
+ ) then
+  --can only root when not
+  --drowning,rooting,dropping,
+  --etc. can root when rotting
 
- self.rooting=true
- local t=tree:new(
-  self.x,self.y,{
-   family=self.family
-  }
- )
+  local t=tree:new(
+   self.x,self.y,{
+    family=self.family
+   }
+  )
 
- self.anim=cowrap(
-  "root",seedroot_anim,self,t
- )
+  self.anim=cowrap(
+   "root",seedroot_anim,self,t
+  )
 
- --anim destroys seed
+  --anim destroys seed
+ end
 end
 
 function seed:update()
@@ -751,6 +757,7 @@ function seed:update()
  self.age+=self.growrate
 
  if self.age>1 then
+  self.rotting=true
   self.anim=cowrap(
    "rot",seedrot_anim,self
   )
