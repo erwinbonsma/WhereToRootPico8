@@ -1113,6 +1113,59 @@ function player:unit_removed(obj)
  end
 end
 
+function player:_move_selection(
+ dx,dy
+)
+ local sel=self.selected
+ if (sel==nil) return
+
+ local nxt=nil
+ local dmin=2000
+ for s in all(self.seeds) do
+  if s!=sel then
+   local vx=s.x-sel.x
+   local vy=s.y-sel.y
+   local mx=vx*dx
+   local my=vy*dy
+   if mx>=0 and my>=0 then
+    --direction matches
+    local d=abs(mx)+abs(my)
+    if (
+     (dx!=0)==(abs(vx)<=abs(vy))
+    ) then
+     --not in target quadrant
+     d+=1000
+    end
+
+    if d<dmin then
+     dmin=d
+     nxt=s
+    end
+   end
+  end
+ end
+
+ if nxt!=nil then
+  self:_unselect()
+  self:_select(nxt)
+ end
+end
+
+function player:update()
+ if btnp(⬅️) then
+  self:_move_selection(-1,0)
+ end
+ if btnp(➡️) then
+  self:_move_selection(1,0)
+ end
+ if btnp(⬆️) then
+  self:_move_selection(0,-1)
+ end
+ if btnp(⬇️) then
+  self:_move_selection(0,1)
+ end
+end
+
 function player:draw()
  print(""..#self.seeds,0,0,7)
 end
@@ -1162,6 +1215,8 @@ end
 function _update()
  if goal.winner==nil then
   grid:update_units()
+
+  plyr:update()
  end
 end
 
