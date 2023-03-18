@@ -662,6 +662,18 @@ function seedroot_anim(args)
  s.destroy=true
 end
 
+function seedrot_anim(args)
+ local s=args[1]
+
+ while s.si>1 do
+  s.si-=1
+  wait(15)
+ end
+
+ s.destroy=true
+end
+
+
 -->8
 --seed
 
@@ -703,6 +715,23 @@ function seed:_tree_fits(t)
  return fits
 end
 
+function seed:root()
+ if (self.anim!=nil) return
+
+ --try to root
+ local t=tree:new(
+  self.x,self.y,{
+   family=self.family
+  }
+ )
+
+ self.anim=cowrap(
+  "root",seedroot_anim,self,t
+ )
+
+ --anim destroys seed
+end
+
 function seed:update()
  if self.destroy then
   --handle destruction by other
@@ -722,19 +751,9 @@ function seed:update()
  self.age+=self.growrate
 
  if self.age>1 then
-  --try to root
-  local t=tree:new(
-   self.x,self.y,{
-    family=self.family
-   }
-  )
-
   self.anim=cowrap(
-   "root",seedroot_anim,self,t
+   "rot",seedrot_anim,self
   )
-
-  --anim destroys seed
-  return
  end
 
  if (not self.moving) return
@@ -1027,7 +1046,7 @@ function tree:draw_crown()
 end
 
 -->8
---main
+--players
 
 player={}
 player.__index=player
@@ -1078,6 +1097,7 @@ function player:unit_removed(
  return true
 end
 
+--human player
 hplayer={}
 extend(hplayer,player)
 hplayer.__index=hplayer
@@ -1196,11 +1216,33 @@ function hplayer:update()
  if btnp(⬇️) then
   self:_move_selection(0,1)
  end
+ if (
+  btnp(❎) and
+  self.selected!=nil
+ ) then
+  self.selected:root()
+ end
 end
 
 function hplayer:draw()
  print(""..#self.seeds,0,0,7)
 end
+
+--computer player
+cplayer={}
+extend(cplayer,player)
+cplayer.__index=cplayer
+
+function cplayer:new(o)
+ o=player.new(self,o)
+ setmetatable(o,self)
+
+ return o
+end
+
+
+-->8
+--main
 
 function _init()
  local lowrez=false
@@ -1285,7 +1327,6 @@ function _draw()
  goal:draw()
  plyr:draw()
 end
-
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
