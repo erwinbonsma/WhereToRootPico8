@@ -481,10 +481,6 @@ function areagoal:new(areas,o)
  return o
 end
 
-function areagoal:observe(grid)
- grid:add_observer(self)
-end
-
 function areagoal:_is_done(
  counts
 )
@@ -678,7 +674,7 @@ function seed:new(dx,dy,o)
  o.dy=dy
  o.age=0
  o.growrate=(
-  0.02+rnd(0.02)
+  0.04+rnd(0.02)
  )/frate
  o.speed=o.speed or 0.1
  o.moving=true
@@ -1028,6 +1024,44 @@ end
 -->8
 --main
 
+player={}
+function player:new(family,o)
+ local o=setmetatable(o or {},self)
+ self.__index=self
+
+ o.family=family
+ o.seeds={}
+
+ return o
+end
+
+function player:_ismyseed(obj)
+ return (
+  isseed(obj) and
+  obj.family==self.family
+ )
+end
+
+function player:unit_added(obj)
+ if self:_ismyseed(obj) then
+  add(self.seeds,obj)
+  obj._pi=#self.seeds
+ end
+end
+
+function player:unit_removed(obj)
+ local s=self.seeds
+ if self:_ismyseed(obj) then
+  assert(s[obj._pi]==obj)
+  local last=s[#s]
+  if obj!=last then
+   last._pi=obj._pi
+   s[obj._pi]=last
+  end
+  deli(s,#s)
+ end
+end
+
 function _init()
  local lowrez=false
 
@@ -1040,7 +1074,7 @@ function _init()
  grid=cellgrid:new(
   {mx=0,my=0}
  )
- goal:observe(grid)
+ grid:add_observer(goal)
  hgrid=cellgrid:new()
  for f in all(families) do
   t=tree:new(f.x,f.y,{
@@ -1048,6 +1082,9 @@ function _init()
   })
   grid:add(t)
  end
+
+ plyr=player:new(families[1])
+ grid:add_observer(plyr)
 
  pal({
   [1]=-16,--dark brown (bg)
@@ -1101,6 +1138,8 @@ function _draw()
  hgrid:draw_units(nil,hgrid.h)
 
  goal:draw()
+
+ print(""..#plyr.seeds,0,0,7)
 end
 
 __gfx__
