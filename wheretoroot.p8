@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 35
+version 41
 __lua__
 -- where to root? v0.2
 -- (c) 2023  eriban
@@ -100,7 +100,7 @@ end
 
 cellgrid={}
 function cellgrid:new(o)
- local o=setmetatable(o or {},self)
+ o=setmetatable(o or {},self)
  self.__index=self
 
  o.w=o.w or 128
@@ -464,7 +464,7 @@ end
 
 areagoal={}
 function areagoal:new(areas,o)
- local o=setmetatable(o or {},self)
+ o=setmetatable(o or {},self)
  self.__index=self
 
  o.areas=areas
@@ -575,33 +575,33 @@ function seeddrop_anim(args)
 end
 
 function seedsquash_anim(args)
- local seed=args[1]
+ local s=args[1]
 
- seed.si=13
+ s.si=13
  wait(4)
 
- while seed.si<15 do
-  seed.si+=1
+ while s.si<15 do
+  s.si+=1
   wait(4)
  end
 
- seed.destroy=true
+ s.destroy=true
 end
 
 function seedsplat_anim(args)
- local seed=args[1]
+ local s=args[1]
 
- seed.vh=0
- while seed.h>2 do
-  seed.vh-=0.04
-  seed.h+=seed.vh
+ s.vh=0
+ while s.h>2 do
+  s.vh-=0.04
+  s.h+=s.vh
   yield()
  end
 
- seed.h=2
- seed.vh=nil
+ s.h=2
+ s.vh=nil
 
- seedsquash_anim({seed})
+ seedsquash_anim({s})
 end
 
 function waterdrop_anim(args)
@@ -640,26 +640,26 @@ function waterdrop_anim(args)
 end
 
 function seedroot_anim(args)
- local seed=args[1]
- local tree=args[2]
- seed.vh=0.5
- while seed.h>0 or seed.vh>0 do
-  seed.vh-=0.04
-  seed.h+=seed.vh
+ local s=args[1]
+ local t=args[2]
+ s.vh=0.5
+ while s.h>0 or s.vh>0 do
+  s.vh-=0.04
+  s.h+=s.vh
   yield()
  end
  yield()
 
- while seed.si<7 do
-  seed.si+=1
+ while s.si<7 do
+  s.si+=1
   wait(10)
  end
 
- if seed:_tree_fits(tree) then
-  grid:add(tree)
+ if s:_tree_fits(t) then
+  grid:add(t)
  end
 
- seed.destroy=true
+ s.destroy=true
 end
 
 -->8
@@ -667,7 +667,7 @@ end
 
 seed={}
 function seed:new(dx,dy,o)
- local o=setmetatable(o or {},self)
+ o=setmetatable(o or {},self)
  self.__index=self
 
  o.dx=dx
@@ -831,7 +831,7 @@ end
 
 tree={}
 function tree:new(x,y,o)
- local o=setmetatable(o or {},self)
+ o=setmetatable(o or {},self)
  self.__index=self
 
  o.x=x
@@ -906,25 +906,25 @@ function tree:_can_drop(
 end
 
 function tree:_dropseeds()
- for seed in all(self.seeds) do
-  hgrid:del(seed)
+ for s in all(self.seeds) do
+  hgrid:del(s)
 
   local kills={}
   if self:_can_drop(
-   seed,kills
+   s,kills
   ) then
-   seed.anim=cowrap(
+   s.anim=cowrap(
     "seeddrop",seeddrop_anim,
-    seed,kills
+    s,kills
    )
   else
-   seed.anim=cowrap(
+   s.anim=cowrap(
     "seedsplat",seedsplat_anim,
-    seed
+    s
    )
   end
 
-  grid:add(seed)
+  grid:add(s)
  end
 end
 
@@ -1030,13 +1030,13 @@ end
 --main
 
 player={}
-function player:new(family,o)
- local o=setmetatable(o or {},self)
- self.__index=self
+player.__index=player
+function player:new(o)
+ assert(o.family!=nil)
 
- o.family=family
+ setmetatable(o,self)
+
  o.seeds={}
- o.selected=nil
 
  return o
 end
@@ -1048,72 +1048,104 @@ function player:_ismyseed(obj)
  )
 end
 
-function player:_unselect()
+function player:unit_added(obj)
+ if not self:_ismyseed(obj) then
+  return false
+ end
+
+ add(self.seeds,obj)
+ obj._pi=#self.seeds
+
+ return true
+end
+
+function player:unit_removed(
+ obj
+)
+ if not self:_ismyseed(obj) then
+  return false
+ end
+
+ local s=self.seeds
+ assert(s[obj._pi]==obj)
+
+ local last=deli(s)
+ if obj!=last then
+  last._pi=obj._pi
+  s[obj._pi]=last
+ end
+
+ return true
+end
+
+hplayer={}
+extend(hplayer,player)
+hplayer.__index=hplayer
+
+function hplayer:new(o)
+ o=player.new(self,o)
+ setmetatable(o,self)
+
+ o.selected=nil
+
+ return o
+end
+
+function hplayer:_unselect()
  if self.selected!=nil then
   self.selected.selected=false
   self.selected=nil
  end
 end
 
-function player:_select(seed)
- if seed!=nil then
+function hplayer:_select(obj)
+ if obj!=nil then
   assert(self.selected==nil)
-  self.selected=seed
-  seed.selected=true
+  self.selected=obj
+  obj.selected=true
  end
 end
 
-function player:_select_closest(
+function hplayer:unit_added(obj)
+ if (
+  player.unit_added(self,obj)
+  and #self.seeds==1
+ ) then
+  self:_select(obj,true)
+ end
+end
+
+function hplayer:unit_removed(
+ obj
+)
+ if (
+  player.unit_removed(self,obj)
+  and obj==self.selected
+ ) then
+  self:_unselect()
+  self:_select_closest(
+   obj.x,obj.y
+  )
+ end
+end
+
+
+function hplayer:_select_closest(
  x,y
 )
- local mind=1000
+ local dmin=1000
  local nearest=nil
  for s in all(self.seeds) do
   local d=vlen(s.x-x,s.y-y)
-  if d<mind then
-   mind=d
+  if d<dmin then
+   dmin=d
    nearest=s
   end
  end
  self:_select(nearest)
 end
 
-function player:unit_added(obj)
- if self:_ismyseed(obj) then
-  add(self.seeds,obj)
-  obj._pi=#self.seeds
-
-  if #self.seeds==1 then
-   self:_select(obj)
-  end
- end
-end
-
-function player:unit_removed(obj)
- local s=self.seeds
- if self:_ismyseed(obj) then
-  assert(s[obj._pi]==obj)
-
-  if obj==self.selected then
-   self:_unselect()
-  end
-
-  local last=s[#s]
-  if obj!=last then
-   last._pi=obj._pi
-   s[obj._pi]=last
-  end
-  deli(s,#s)
-
-  if self.selected==nil then
-   self:_select_closest(
-    obj.x,obj.y
-   )
-  end
- end
-end
-
-function player:_move_selection(
+function hplayer:_move_selection(
  dx,dy
 )
  local sel=self.selected
@@ -1151,7 +1183,7 @@ function player:_move_selection(
  end
 end
 
-function player:update()
+function hplayer:update()
  if btnp(⬅️) then
   self:_move_selection(-1,0)
  end
@@ -1166,7 +1198,7 @@ function player:update()
  end
 end
 
-function player:draw()
+function hplayer:draw()
  print(""..#self.seeds,0,0,7)
 end
 
@@ -1192,7 +1224,9 @@ function _init()
   t.age=0.9
  end
 
- plyr=player:new(families[1])
+ plyr=hplayer:new({
+  family=families[1]
+ })
  grid:add_observer(plyr)
 
  pal({
