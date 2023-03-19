@@ -17,23 +17,19 @@ cellsz=8
 roots_r=16
 max_growrate=0.05/frate
 
-families={
- {p={
-  --red
+player_pals={
+ {--red
   [6]=8,[5]=2,[7]=14
- }},
- {p={
-  --pink
+ },
+ {--pink
   [6]=14,[5]=2,[7]=15
- }},
- {p={
-  --green
+ },
+ {--green
   [6]=10,[5]=3,[7]=11
- }},
- {p={
-  --blue
+ },
+ {--blue
   [6]=13,[5]=2,[7]=12
- }}
+ }
 }
 
 --maps level-menu positions to
@@ -234,11 +230,14 @@ function levelmenu:update()
   self:_try_move(4)
  end
  if btnp(❎) then
-  game_start(self.lvl)
+  start_game(self.lvl)
  end
 end
 
 function levelmenu:draw()
+ cls()
+
+ camera(4,-12)
  self.grid:draw()
 
  palt(7,true)
@@ -279,11 +278,12 @@ function levelmenu:draw()
  end
 
  palt()
+ camera()
 
  local name=level_defs[
   self.lvl
  ].name
- print(name,62-#name/2,110,7)
+ print(name,64-#name*2,120,7)
 end
 -->8
 --cellgrid
@@ -689,18 +689,22 @@ function rectgoal(args)
 end
 
 areagoal={}
-function areagoal:new(areas,o)
- o=setmetatable(o or {},self)
+function areagoal:new(
+ areas,players
+)
+ local o=setmetatable({},self)
  self.__index=self
 
  o.areas=areas
+ o.players=players
+
  o.counts={}
- for f in all(families) do
-  local fc={}
+ for plyr in all(players) do
+  local pc={}
   for area in all(areas) do
-   fc[area]=0
+   pc[area]=0
   end
-  o.counts[f]=fc
+  o.counts[plyr]=pc
  end
  o.winner=nil
 
@@ -721,19 +725,19 @@ function areagoal:unit_added(
 )
  if (not istree(unit)) return
 
- local family=unit.family
+ local plyr=unit.player
  local cellx=unit.x/cellsz
  local celly=unit.y/cellsz
  for area in all(self.areas) do
   if area(cellx,celly) then
-   local cf=self.counts[family]
+   local cf=self.counts[plyr]
    cf[area]+=1
    unit.area=area
    if (
     cf[area]==1 and
     self:_is_done(cf)
    ) then
-    self.winner=family
+    self.winner=plyr
    end
    return
   end
@@ -747,27 +751,28 @@ function areagoal:unit_removed(
 )
  local c=self.counts
  if unit.area!=nil then
-  c[unit.family][unit.area]-=1
+  c[unit.player][unit.area]-=1
   unit.area=nil
  end
 end
 
 function areagoal:draw()
  local x=10
- local y=-14
+ local y=2
  local c=self.counts
- for p in all(players) do
-  pal(p.family.p)
+ for p in all(self.players) do
+  pal(p.pal)
   spr(4,x,y-1)
   x+=7
   for area in all(self.areas) do
-   print(c[p.family][area],x,y,6)
+   print(c[p][area],x,y,6)
    x+=4
   end
   x+=4
   pal(0)
  end
 end
+
 -->8
 --animations
 
@@ -900,6 +905,16 @@ function seedrot_anim(args)
  s.destroy=true
 end
 
+function gameend_anim(args)
+ local g=args[1]
+ local msg=args[2]
+
+ g.msg=msg
+
+ wait(90)
+
+ scene=menu
+end
 -->8
 --seed
 
@@ -953,7 +968,7 @@ function seed:root()
 
  local t=tree:new(
   self.x,self.y,{
-   family=self.family
+   player=self.player
   }
  )
 
@@ -1020,7 +1035,7 @@ function seed:draw()
  local y=flr(
   self.y*yscale
  )-self.h-5
- pal(self.family.p)
+ pal(self.player.pal)
  if self.h>=0 then
   spr(self.si,self.x-3,y)
  else
@@ -1117,7 +1132,7 @@ function tree:_blossom()
  for a in all(angles) do
   local s=seed:new(
    sin(a),cos(a),{
-    family=self.family
+    player=self.player
    }
   )
   s.x=self.x+s.dx*branch_l
@@ -1259,7 +1274,7 @@ function tree:draw()
  line(x+1,y,x+1,y-h,5)
  line(
   x,y-h,x+1,y-h,
-  self.family.p[6]
+  self.player.pal[6]
  )
 end
 
@@ -1269,7 +1284,7 @@ function tree:draw_crown()
  local si=min(
   ceil((self.age-0.3)*40),17
  )
- pal(7,self.family.p[6])
+ pal(7,self.player.pal[6])
  if si<5 then
   spr(
    tree_sprites[si],
@@ -1292,30 +1307,36 @@ end
 
 player={}
 player.__index=player
+
 function player:new(o)
- assert(o.family!=nil)
+ assert(o.pal!=nil)
 
  setmetatable(o,self)
 
  o.seeds={}
+ o.trees={}
 
  return o
 end
 
-function player:_ismyseed(obj)
- return (
-  isseed(obj) and
-  obj.family==self.family
- )
+function player:_listfor(obj)
+ if isseed(obj) then
+  return self.seeds
+ end
+ if istree(obj) then
+  return self.trees
+ end
 end
 
 function player:unit_added(obj)
- if not self:_ismyseed(obj) then
+ if obj.player!=self then
   return false
  end
 
- add(self.seeds,obj)
- obj._pi=#self.seeds
+ local l=self:_listfor(obj)
+
+ add(l,obj)
+ obj._pi=#l
 
  return true
 end
@@ -1323,17 +1344,17 @@ end
 function player:unit_removed(
  obj
 )
- if not self:_ismyseed(obj) then
+ if obj.player!=self then
   return false
  end
 
- local s=self.seeds
- assert(s[obj._pi]==obj)
+ local l=self:_listfor(obj)
+ assert(l[obj._pi]==obj)
 
- local last=deli(s)
+ local last=deli(l)
  if obj!=last then
   last._pi=obj._pi
-  s[obj._pi]=last
+  l[obj._pi]=last
  end
 
  return true
@@ -1371,6 +1392,7 @@ end
 function hplayer:unit_added(obj)
  if (
   player.unit_added(self,obj)
+  and isseed(obj)
   and #self.seeds==1
  ) then
   self:_select(obj,true)
@@ -1390,7 +1412,6 @@ function hplayer:unit_removed(
   )
  end
 end
-
 
 function hplayer:_select_closest(
  x,y
@@ -1512,43 +1533,6 @@ end
 -->8
 --main
 
-function load_level(level)
- local ld=level_defs[level].data
-
- areas={}
- for args in all(ld.goals) do
-  add(areas,rectgoal(args))
- end
- goal=areagoal:new(areas)
- grid=cellgrid:new({
-  mx=ld.mapdef[1],
-  my=ld.mapdef[2],
-  ncols=ld.mapdef[3],
-  nrows=ld.mapdef[4]
- })
- grid:add_observer(goal)
- hgrid=cellgrid:new()
-
- players={}
- for i,p in pairs(ld.plyrs) do
-  local f=families[i]
-  local t=tree:new(
-   p[1],p[2],{family=f}
-  )
-  grid:add(t)
-  t.age=0.9
-
-  local plyr={family=f}
-  if i==1 then
-   plyr=hplayer:new(plyr)
-  else
-   plyr=cplayer:new(plyr)
-  end
-  add(players,plyr)
-  grid:add_observer(plyr)
- end
-end
-
 function _init()
  pal({
   [1]=-16,--dark brown (bg)
@@ -1562,29 +1546,99 @@ function _init()
  progress_stats=stats:new()
  menu=levelmenu:new()
 
- --game_init()
- levelmenu_init()
+ scene=menu
 end
 
-function game_start(level)
- load_level(level)
+game={}
+function game:new(level)
+ local o=setmetatable({},self)
+ self.__index=self
 
- _draw=game_draw
- _update=game_update
+ o:load_level(level)
 
- camera(
-  grid.ncols*4-64,
-  grid.nrows*3-70
- )
+ return o
 end
 
-function game_update()
- if goal.winner==nil then
-  grid:update_units()
+function game:load_level(level)
+ local ld=level_defs[
+  level
+ ].data
+ self.level=level
 
-  for p in all(players) do
-   p:update()
+ --todo: make members?
+ grid=cellgrid:new({
+  mx=ld.mapdef[1],
+  my=ld.mapdef[2],
+  ncols=ld.mapdef[3],
+  nrows=ld.mapdef[4]
+ })
+ hgrid=cellgrid:new()
+
+ self.players={}
+ for i,p in pairs(ld.plyrs) do
+  local plyr={
+   pal=player_pals[i]
+  }
+  if i==1 then
+   plyr=hplayer:new(plyr)
+  else
+   plyr=cplayer:new(plyr)
   end
+  add(self.players,plyr)
+  grid:add_observer(plyr)
+
+  local t=tree:new(
+   p[1],p[2],{player=plyr}
+  )
+  grid:add(t)
+  t.age=0.7
+ end
+
+ local areas={}
+ for args in all(ld.goals) do
+  add(areas,rectgoal(args))
+ end
+ self.goal=areagoal:new(
+  areas,self.players
+ )
+ grid:add_observer(self.goal)
+end
+
+function game:update()
+ if self.anim!=nil then
+  if coinvoke(self.anim) then
+   self.anim=nil
+  end
+
+  return
+ end
+
+ grid:update_units()
+
+ for p in all(self.players) do
+  p:update()
+ end
+
+ local msg=nil
+ local human=self.players[1]
+ local winner=self.goal.winner
+ if winner!=nil then
+  if winner==human then
+   msg="level complete!"
+  else
+   msg="beaten by bots"
+  end
+ elseif (
+  #human.seeds+#human.trees==0
+ ) then
+  msg="game over"
+ end
+
+ if msg!=nil then
+  self.anim=cowrap(
+   "gameend",
+   gameend_anim,self,msg
+  )
  end
 end
 
@@ -1594,8 +1648,13 @@ function draw_treetop(unit)
  end
 end
 
-function game_draw()
- cls(0)
+function game:draw()
+ cls()
+
+ camera(
+  grid.ncols*4-64,
+  grid.nrows*3-70
+ )
 
  --draw map and units on ground
  grid:draw()
@@ -1606,32 +1665,34 @@ function game_draw()
  --draw seeds on top of trees
  hgrid:draw_units(nil)
 
- goal:draw()
+ camera()
+
+ self.goal:draw()
+ if self.msg!=nil then
+  print(
+   self.msg,63-#self.msg*2,62,7
+  )
+ end
 end
 
-function levelmenu_init()
- _draw=levelmenu_draw
- _update=levelmenu_update
-
- camera(4,-12)
+function start_game(level)
+ scene=game:new(level)
 end
 
-function levelmenu_draw()
- cls()
-
- menu:draw()
+function _draw()
+ scene:draw()
 end
 
-function levelmenu_update()
- menu:update()
+function _update()
+ scene:update()
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 007007000000000000000000000000000006600000000000000000000000000000000000000000000c0000c00000000000000000000000000000000060000000
 00077000000000000000000000060000006765000000000000000000000000000000000000c00c0000c00c000000000000000000000660000600000000000060
-000770000000000000065000006750000066650000000000000000000000000000000000000cc000000cc0000cc00cc000000000006765000006670000000000
-0070070000060000000550000005000000055000000000000000000000000000000cc000000cc00000000000000cc00000c00c00006665000067650000066000
+000770000000000000076000006750000066650000000000000000000000000000000000000cc000000cc0000cc00cc000000000006765000006670000000000
+0070070000060000000650000005000000055000000000000000000000000000000cc000000cc00000000000000cc00000c00c00006665000067650000066000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600006000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060000006
 00060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
