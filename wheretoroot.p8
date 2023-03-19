@@ -86,7 +86,12 @@ flag_water=2
 flag_barren=3
 
 function vlen(dx,dy)
- return sqrt(dx*dx+dy*dy)
+ if abs(dx)+abs(dy)>100 then
+  --guard against overflows
+  return 100
+ else
+  return sqrt(dx*dx+dy*dy)
+ end
 end
 
 --wrap coroutine with a name to
@@ -590,8 +595,8 @@ function cellgrid:fits(
  x,y,r,objx
 )
  if (
-  self:_invalid_pos(x,y) or
-  not self:_fits_map(x,y,r)
+  self:_invalid_pos(x,y)
+  or not self:_fits_map(x,y,r)
  ) then
   return false
  end
@@ -1124,11 +1129,11 @@ function tree:new(x,y,o)
 end
 
 function tree:_blossom()
- self.seeds={}
  local angles=create_angles(
   self.maxseeds,0.15
  )
 
+ self.seeds={}
  for a in all(angles) do
   local s=seed:new(
    sin(a),cos(a),{
