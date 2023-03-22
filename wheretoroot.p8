@@ -167,12 +167,15 @@ end
 
 levelmenu={}
 
-function levelmenu:new()
+function levelmenu:new(
+ stats
+)
  local o=setmetatable({},self)
  self.__index=self
 
  o:_setpos(0)
 
+ o.stats=stats
  o.grid=cellgrid:new({
   mx=0,my=18,nrows=17,ncols=17
  })
@@ -196,16 +199,29 @@ function levelmenu:_setpos(pos)
  self.lvl=levelmenu_pos[pos+1]
 end
 
-function levelmenu:_connected(
+function levelmenu:_can_move(
  p1,p2
 )
  assert(p2>p1)
- if p2-p1==1 then
-  return self.hbridges[p1]
+ if not (
+  p2-p1==1
+  and self.hbridges[p1]
+ ) and not (
+  p2-p1==4
+  and self.vbridges[p1]
+ ) then
+  --there's no bridge
+  return false
  end
- if p2-p1==4 then
-  return self.vbridges[p1]
+
+ for p in all({p1,p2}) do
+  if self.stats:is_done(
+   levelmenu_pos[p+1]
+  ) then
+   return true
+  end
  end
+
  return false
 end
 
@@ -213,7 +229,7 @@ function levelmenu:_try_move(
  delta_pos
 )
  local pnew=self.pos+delta_pos
- if self:_connected(
+ if self:_can_move(
   min(self.pos,pnew),
   max(self.pos,pnew)
  ) then
@@ -235,14 +251,22 @@ function levelmenu:update()
   self:_try_move(4)
  end
  if btnp(❎) then
-  start_game(self.lvl)
+  scene=game:new(
+   self.lvl,self.stats
+  )
  end
+-- if btnp(🅾️) then
+--  printh("mark_done: "..self.lvl)
+--  self.stats:mark_done(
+--   self.lvl
+--  )
+-- end
 end
 
 function levelmenu:draw()
  cls()
 
- camera(4,-12)
+ camera(4,-14)
  self.grid:draw()
 
  palt(7,true)
@@ -261,29 +285,25 @@ function levelmenu:draw()
   local y=flr(p/4)*24+10
 
   if self.hbridges[p] then
-   local open=(
-    levelmenu_pos[p+1]!=0 or
-    levelmenu_pos[p+2]!=0
-   ) and false
-   spr(
-    open and 81 or 80,x+16,y
+   local f=self:_can_move(
+    p,p+1
    )
-   spr(
-    open and 70 or 69,x+16,y+6
-   )
+   spr(f and 80 or 81,x+16,y)
+   spr(f and 69 or 70,x+16,y+6)
   end
 
   if self.vbridges[p] then
-   local open=(
-    levelmenu_pos[p+1]!=0 or
-    levelmenu_pos[p+5]!=0
-   ) and false
-   spr(open and 82 or 80,x,y+12)
+   local f=self:_can_move(
+    p,p+4
+   )
+   spr(f and 80 or 82,x,y+12)
   end
  end
 
  palt()
  camera()
+
+ print("level selection",34,0,7)
 
  local name=level_defs[
   self.lvl
@@ -1549,17 +1569,20 @@ function _init()
  },1)
 
  progress_stats=stats:new()
- menu=levelmenu:new()
+ menu=levelmenu:new(
+  progress_stats
+ )
 
  scene=menu
 end
 
 game={}
-function game:new(level)
+function game:new(level,stats)
  local o=setmetatable({},self)
  self.__index=self
 
  o:load_level(level)
+ o.stats=stats
 
  return o
 end
@@ -1629,6 +1652,9 @@ function game:update()
  local winner=self.goal.winner
  if winner!=nil then
   if winner==human then
+   self.stats:mark_done(
+    self.level
+   )
    msg="level complete!"
   else
    msg="beaten by bots"
@@ -1678,10 +1704,6 @@ function game:draw()
    self.msg,63-#self.msg*2,62,7
   )
  end
-end
-
-function start_game(level)
- scene=game:new(level)
 end
 
 function _draw()
