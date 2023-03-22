@@ -43,7 +43,7 @@ levelmenu_pos={
 }
 
 level_defs={{
- name="basic",
+ name="start",
  data={
   mapdef={0,0,15,15},
   goals={{3,3,3,3},{3,9,3,3},{9,3,3,3},{9,9,3,3}},
@@ -92,6 +92,20 @@ function vlen(dx,dy)
  else
   return sqrt(dx*dx+dy*dy)
  end
+end
+
+function fill(s,fill)
+ if #s>=#fill then
+  return s
+ end
+ return sub(fill,#fill-#s+1)..s
+end
+
+function time_str(t)
+ return (
+  tostr(flr(t/60))..":"..
+  fill(tostr(flr(t%60)),"00")
+ )
 end
 
 --wrap coroutine with a name to
@@ -156,13 +170,24 @@ function stats:new()
 end
 
 function stats:mark_done(
- level
+ level,time_taken,total_trees
 )
- self.lvls[level]=true
+ self.lvls[level]={
+  time_taken=min(
+   time_taken,5999
+  ),
+  total_trees=min(
+   total_trees,999
+  )
+ }
 end
 
 function stats:is_done(level)
  return self.lvls[level]!=nil
+end
+
+function stats:get_stats(level)
+ return self.lvls[level]
 end
 
 levelmenu={}
@@ -255,12 +280,6 @@ function levelmenu:update()
    self.lvl,self.stats
   )
  end
--- if btnp(🅾️) then
---  printh("mark_done: "..self.lvl)
---  self.stats:mark_done(
---   self.lvl
---  )
--- end
 end
 
 function levelmenu:draw()
@@ -308,7 +327,19 @@ function levelmenu:draw()
  local name=level_defs[
   self.lvl
  ].name
- print(name,64-#name*2,120,7)
+ print(name,0,120,4)
+
+ if self.stats:is_done(
+  self.lvl
+ ) then
+  local s=self.stats:get_stats(
+   self.lvl
+  )
+  s="⧗="..time_str(
+   s.time_taken
+  ).." t="..s.total_trees
+  print(s,124-#s*4,120,4)
+ end
 end
 -->8
 --cellgrid
@@ -1340,6 +1371,7 @@ function player:new(o)
 
  o.seeds={}
  o.trees={}
+ o.total_trees=0
 
  return o
 end
@@ -1362,6 +1394,10 @@ function player:unit_added(obj)
 
  add(l,obj)
  obj._pi=#l
+
+ if istree(obj) then
+  self.total_trees+=1
+ end
 
  return true
 end
@@ -1583,6 +1619,7 @@ function game:new(level,stats)
 
  o:load_level(level)
  o.stats=stats
+ o.start=time()
 
  return o
 end
@@ -1647,25 +1684,45 @@ function game:update()
   p:update()
  end
 
- local msg=nil
  local human=self.players[1]
  local winner=self.goal.winner
+
+ if btnp(🅾️) then
+  winner=human
+ end
+
+ local msg={}
  if winner!=nil then
   if winner==human then
-   self.stats:mark_done(
-    self.level
+   local time_taken=(
+    time()-self.start
    )
-   msg="level complete!"
+   local tt=winner.total_trees
+   if (time_taken<0) then
+    --guard against wrapping
+    time_taken=999
+   end
+   self.stats:mark_done(
+    self.level,time_taken,tt
+   )
+   add(msg,"level complete!")
+   add(msg,"")
+   add(
+    msg,"⧗="..time_str(
+     time_taken
+    )
+   )
+   add(msg,"#trees="..tt)
   else
-   msg="beaten by bots"
+   add(msg,"beaten by bots")
   end
  elseif (
   #human.seeds+#human.trees==0
  ) then
-  msg="game over"
+  add(msg,"game over")
  end
 
- if msg!=nil then
+ if #msg>0 then
   self.anim=cowrap(
    "gameend",
    gameend_anim,self,msg
@@ -1700,9 +1757,13 @@ function game:draw()
 
  self.goal:draw()
  if self.msg!=nil then
-  print(
-   self.msg,63-#self.msg*2,62,7
-  )
+  local y=63-3*#self.msg
+  local c=7
+  for txt in all(self.msg) do
+   print(txt,63-#txt*2,y,c)
+   y+=6
+   c=4
+  end
  end
 end
 
