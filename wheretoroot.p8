@@ -201,8 +201,6 @@ function levelmenu:new(
  local o=setmetatable({},self)
  self.__index=self
 
- o:_setpos(0)
-
  o.stats=stats
  o.grid=cellgrid:new({
   mx=0,my=18,nrows=17,ncols=17
@@ -217,14 +215,61 @@ function levelmenu:new(
   o.vbridges[b]=true
  end
 
+ for p=19,0,-1 do
+  o:_setpos(p)
+  if stats:is_done(o.lvl) then
+   o:_addtree(1)
+  end
+ end
+
  return o
 end
 
 function levelmenu:_setpos(pos)
+ if self.pos!=nil then
+  for x=1,3 do
+   for y=1,3 do
+    local odd=(x+y)%2==0
+    mset(
+     self.grid.mx+x+self.cx*4,
+     self.grid.my+y+self.cy*4,
+     odd and 64 or 65
+    )
+   end
+  end
+ end
+
  self.pos=pos
  self.cx=pos%4
  self.cy=flr(pos/4)
  self.lvl=levelmenu_pos[pos+1]
+ self.tree=self.stats:is_done(
+  self.lvl
+ )
+
+ for x=1,3 do
+  for y=1,3 do
+   mset(
+    self.grid.mx+x+self.cx*4,
+    self.grid.my+y+self.cy*4,
+    66
+   )
+  end
+ end
+end
+
+--add tree at current position
+function levelmenu:_addtree(age)
+ self.grid:add(tree:new(
+  self.cx*32+20,
+  self.cy*32+20,{
+   age=age,
+   preserve=true,
+   seeds={},
+   player={pal=player_pals[1]}
+  }
+ ))
+ self.tree=true
 end
 
 function levelmenu:_can_move(
@@ -283,6 +328,15 @@ function levelmenu:update()
    self.lvl,self.stats
   )
  end
+
+ if (
+  not self.tree and
+  self.stats:is_done(self.lvl)
+ ) then
+  self:_addtree(0)
+ end
+
+ self.grid:update_units()
 end
 
 function levelmenu:draw()
@@ -290,17 +344,12 @@ function levelmenu:draw()
 
  camera(4,-14)
  self.grid:draw()
+ self.grid:visit_units(
+  draw_treetop
+ )
 
  palt(7,true)
  palt(0,false)
- for x=1,3 do
-  for y=1,3 do
-   spr(66,
-    (self.cx*4+x)*8,
-    (self.cy*4+y)*6-2
-   )
-  end
- end
 
  for p=0,19 do
   local x=(p%4)*32+16
@@ -439,6 +488,8 @@ function cellgrid:add(obj)
  self:_insert(
   self:_obj_before_y(obj.y),obj
  )
+ assert(obj.grid==nil)
+ obj.grid=self
 
  for o in all(self.observers) do
   o:unit_added(obj)
@@ -447,6 +498,8 @@ end
 
 function cellgrid:del(obj)
  self:_remove(obj)
+ assert(obj.grid==self)
+ obj.grid=nil
 
  for o in all(self.observers) do
   o:unit_removed(obj)
@@ -1096,11 +1149,11 @@ function seed:draw()
  )-self.h-5
  pal(self.player.pal)
  if self.h>=0 then
-  spr(self.si,self.x-3,y)
+  spr(self.si,self.x-4,y)
  else
   sspr(
    self.si*8,0,8,6+self.h,
-   self.x-3,y
+   self.x-4,y
   )
  end
 
@@ -1177,7 +1230,7 @@ function tree:new(x,y,o)
  o.age=o.age or 0
  o.rate_refresh=0
 
- o.seeds=nil
+ o.seeds=o.seeds or nil
 
  return o
 end
@@ -1204,7 +1257,6 @@ function tree:_blossom()
    add(self.seeds,s)
   end
  end
- self.seed_si=1
 end
 
 function tree:_can_drop(
@@ -1259,7 +1311,7 @@ function tree:_dropseeds()
    )
   end
 
-  grid:add(s)
+  self.grid:add(s)
  end
 end
 
@@ -1273,7 +1325,7 @@ function tree:_update_growrate()
    c+=max(roots_r-d,0)/roots_r
   end
  end
- grid:visit_hits(
+ self.grid:visit_hits(
   self.x,self.y,roots_r,
   visitor,self
  )
@@ -1285,6 +1337,7 @@ function tree:update()
  if self.destroy then
   return true
  end
+ if (self.skip_update) return
 
  if self.age>=self.rate_refresh then
   self:_update_growrate()
@@ -1296,7 +1349,6 @@ function tree:update()
 
  if self.seeds==nil then
   self:_blossom()
-  return
  end
 
  local seed_si=max(1,min(4,ceil(
@@ -1311,8 +1363,12 @@ function tree:update()
 
  if (self.age<1) return
 
- self:_dropseeds()
- return true
+ if self.preserve then
+  self.skip_update=true
+ else
+  self:_dropseeds()
+  return true
+ end
 end
 
 tree_sprites={
@@ -1329,10 +1385,10 @@ function tree:draw()
 
  local x=self.x
  local y=flr(self.y*yscale)
- line(x,y,x,y-h,4)
- line(x+1,y,x+1,y-h,5)
+ line(x-1,y,x-1,y-h,4)
+ line(x,y,x,y-h,5)
  line(
-  x,y-h,x+1,y-h,
+  x-1,y-h,x,y-h,
   self.player.pal[6]
  )
 end
@@ -1347,19 +1403,26 @@ function tree:draw_crown()
  if si<5 then
   spr(
    tree_sprites[si],
-   self.x-3,
+   self.x-4,
    self.y*yscale-8
   )
  else
   spr(
    tree_sprites[si],
-   self.x-7,
+   self.x-8,
    self.y*yscale-11,
    2,2
   )
  end
  pal(0)
 end
+
+function draw_treetop(unit)
+ if istree(unit) then
+  unit:draw_crown()
+ end
+end
+
 
 -->8
 --players
@@ -1730,12 +1793,6 @@ function game:update()
    "gameend",
    gameend_anim,self,msg
   )
- end
-end
-
-function draw_treetop(unit)
- if istree(unit) then
-  unit:draw_crown()
  end
 end
 
