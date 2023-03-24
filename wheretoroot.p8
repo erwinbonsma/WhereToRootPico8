@@ -172,12 +172,15 @@ end
 function stats:mark_done(
  level,time_taken,total_trees
 )
+ local cur=self.lvls[level] or {}
  self.lvls[level]={
   time_taken=min(
-   time_taken,5999
+   time_taken,
+   cur.time_taken or 5999
   ),
   total_trees=min(
-   total_trees,999
+   total_trees,
+   cur.total_trees or 999
   )
  }
 end
