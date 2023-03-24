@@ -43,32 +43,32 @@ levelmenu_pos={
 }
 
 level_defs={{
- name="start",
+ name="intro",
  data={
   mapdef={0,0,15,15},
   goals={{3,3,3,3},{3,9,3,3},{9,3,3,3},{9,9,3,3}},
-  plyrs={{35,35}}
+  plyrs={{36,36}}
  }
 },{
  name="walls",
  data={
   mapdef={15,0,15,15},
   goals={{3,3,4,4},{3,8,4,4},{8,3,4,4},{8,8,4,4}},
-  plyrs={{39,39}}
+  plyrs={{40,40}}
  }
 },{
  name="tiles",
  data={
   mapdef={30,0,15,15},
   goals={{3,3,3,3},{3,9,3,3},{9,3,3,3},{9,9,3,3}},
-  plyrs={{35,35}}
+  plyrs={{36,36}}
  }
 },{
  name="water",
  data={
   mapdef={45,0,15,15},
   goals={{2,2,4,4},{2,9,4,4},{9,2,4,4},{9,9,4,4}},
-  plyrs={{31,31}}
+  plyrs={{32,32}}
  }
 },{
  name="fancy",
