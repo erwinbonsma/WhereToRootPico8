@@ -343,7 +343,7 @@ function levelmenu:update()
 end
 
 function levelmenu:draw()
- cls()
+ cls(6)
 
  camera(4,-14)
  self.grid:draw()
@@ -377,12 +377,12 @@ function levelmenu:draw()
  palt()
  camera()
 
- print("level selection",34,0,7)
+ print("where to root?",37,2,7)
 
  local name=level_defs[
   self.lvl
  ].name
- print(name,0,120,4)
+ print("level: "..name,4,120,4)
 
  if self.stats:is_done(
   self.lvl
@@ -390,10 +390,13 @@ function levelmenu:draw()
   local s=self.stats:get_stats(
    self.lvl
   )
-  s="⧗="..time_str(
+  local arrow=" \^:08083e1c08000000"
+  s="⧗"..time_str(
    s.time_taken
-  ).." t="..s.total_trees
-  print(s,124-#s*4,120,4)
+  )..arrow..s.total_trees
+  print(
+   s,108-(#s-#arrow)*4,120,4
+  )
  end
 end
 -->8
@@ -1766,6 +1769,7 @@ function game:load_level(level)
  hgrid=cellgrid:new()
 
  self.players={}
+ local trees={}
  for i,p in pairs(ld.plyrs) do
   local plyr={
    pal=player_pals[i]
@@ -1781,8 +1785,8 @@ function game:load_level(level)
   local t=tree:new(
    p[1],p[2],{player=plyr}
   )
-  grid:add(t)
   t.age=0.7
+  add(trees,t)
  end
 
  local areas={}
@@ -1793,6 +1797,10 @@ function game:load_level(level)
   areas,self.players
  )
  grid:add_observer(self.goal)
+
+ for t in all(trees) do
+  grid:add(t)
+ end
 end
 
 function game:update()
@@ -1834,11 +1842,11 @@ function game:update()
    add(msg,"level complete!")
    add(msg,"")
    add(
-    msg,"⧗="..time_str(
+    msg,"⧗"..time_str(
      time_taken
     )
    )
-   add(msg,"#trees="..tt)
+   add(msg,tt.." trees planted")
    sfx(4)
   else
    add(msg,"beaten by bots")
@@ -1860,7 +1868,7 @@ function game:update()
 end
 
 function game:draw()
- cls()
+ cls(1)
 
  camera(
   grid.ncols*4-64,
