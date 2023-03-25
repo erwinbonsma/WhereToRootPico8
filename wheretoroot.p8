@@ -377,12 +377,12 @@ function levelmenu:draw()
  palt()
  camera()
 
- print("where to root?",37,2,7)
+ print("where to root?",37,2,4)
 
  local name=level_defs[
   self.lvl
  ].name
- print("level: "..name,4,120,4)
+ print("level: "..name,4,120,9)
 
  if self.stats:is_done(
   self.lvl
@@ -395,7 +395,7 @@ function levelmenu:draw()
    s.time_taken
   )..arrow..s.total_trees
   print(
-   s,108-(#s-#arrow)*4,120,4
+   s,108-(#s-#arrow)*4,120,9
   )
  end
 end
