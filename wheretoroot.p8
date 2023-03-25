@@ -1821,9 +1821,9 @@ function game:update()
  local human=self.players[1]
  local winner=self.goal.winner
 
- if btnp(🅾️) then
-  winner=human
- end
+-- if btnp(🅾️) then
+--  winner=human
+-- end
 
  local msg={}
  if winner!=nil then
