@@ -46,28 +46,28 @@ level_defs={{
  name="intro",
  data={
   mapdef={0,0,15,15},
-  goals={{3,3,3,3},{3,9,3,3},{9,3,3,3},{9,9,3,3}},
+  goals={{3,3,3,3},{9,3,3,3},{3,9,3,3},{9,9,3,3}},
   plyrs={{36,36}}
  }
 },{
  name="walls",
  data={
   mapdef={15,0,15,15},
-  goals={{3,3,4,4},{3,8,4,4},{8,3,4,4},{8,8,4,4}},
+  goals={{3,3,4,4},{8,3,4,4},{3,8,4,4},{8,8,4,4}},
   plyrs={{40,40}}
  }
 },{
  name="tiles",
  data={
   mapdef={30,0,15,15},
-  goals={{3,3,3,3},{3,9,3,3},{9,3,3,3},{9,9,3,3}},
+  goals={{3,3,3,3},{9,3,3,3},{3,9,3,3},{9,9,3,3}},
   plyrs={{36,36}}
  }
 },{
  name="water",
  data={
   mapdef={45,0,15,15},
-  goals={{2,2,4,4},{2,9,4,4},{9,2,4,4},{9,9,4,4}},
+  goals={{2,2,4,4},{9,2,4,4},{2,9,4,4},{9,9,4,4}},
   plyrs={{32,32}}
  }
 },{
@@ -879,14 +879,19 @@ function areagoal:draw()
  local y=2
  local c=self.counts
  for p in all(self.players) do
+  y=2
   pal(p.pal)
   spr(4,x,y-1)
   x+=7
-  for area in all(self.areas) do
-   print(c[p][area],x,y,6)
-   x+=4
+  for n,a in pairs(self.areas) do
+   n-=1
+   print(
+    c[p][a],
+    x+(n%2)*4,
+    y+flr(n/2)*6,6
+   )
   end
-  x+=4
+  x+=12
   pal(0)
  end
 end
