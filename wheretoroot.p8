@@ -40,7 +40,7 @@ player_pals={
 --levels
 levelmenu_pos={
  1,2,3,0,
- 0,0,4,0,
+ 0,5,4,0,
  0,0,0,0,
  0,0,0,0,
  0,0,0,0
@@ -73,6 +73,13 @@ level_defs={{
   mapdef={45,0,15,15},
   goals={{2,2,4,4},{9,2,4,4},{2,9,4,4},{9,9,4,4}},
   plyrs={{32,32}}
+ }
+},{
+ name="others",
+ data={
+  mapdef={0,0,15,15},
+  goals={{3,3,3,3},{9,3,3,3},{3,9,3,3},{9,9,3,3}},
+  plyrs={{36,36},{84,36},{36,84},{84,84}}
  }
 }}
 
@@ -175,6 +182,8 @@ function stats:new()
 
  dset(0,vmajor)
  dset(1,vminor)
+ dset(10,1000)
+ dset(11,6000)
 
  return o
 end
@@ -216,7 +225,7 @@ function levelmenu:new(
  })
 
  o.hbridges={}
- for b in all({0,1}) do
+ for b in all({0,1,5}) do
   o.hbridges[b]=true
  end
  o.vbridges={}
@@ -359,9 +368,6 @@ function levelmenu:draw()
 
  camera(4,-14)
  self.grid:draw()
- self.grid:visit_units(
-  draw_treetop
- )
 
  palt(7,true)
  palt(0,false)
@@ -387,6 +393,10 @@ function levelmenu:draw()
  end
 
  palt()
+ self.grid:visit_units(
+  draw_treetop
+ )
+
  camera()
 
  print("where to root?",37,2,4)
@@ -976,6 +986,8 @@ end
 
 function waterdrop_anim(args)
  local s=args[1]
+ local use_sfx=args[2]
+
  local f=grid:water_force(
   s.x,s.y,s.r
  )
@@ -999,7 +1011,7 @@ function waterdrop_anim(args)
  s.h=-3
  s.vh=nil
 
- sfx(9)
+ if (use_sfx) sfx(9)
  s.si=8
  wait(2)
 
@@ -1014,8 +1026,9 @@ end
 function seedroot_anim(args)
  local s=args[1]
  local t=args[2]
+ local use_sfx=args[3]
 
- sfx(11)
+ if (use_sfx) sfx(11)
 
  s.vh=0.5
  while s.h>0 or s.vh>0 do
@@ -1025,7 +1038,7 @@ function seedroot_anim(args)
  end
  yield()
 
- sfx(15)
+ if (use_sfx) sfx(15)
  local steps=s.si
  for i=0,s.si-1 do
   s.h=-i
@@ -1035,7 +1048,7 @@ function seedroot_anim(args)
  if s:_tree_fits(t) then
   grid:add(t)
  else
-  sfx(14)
+  if (use_sfx) sfx(14)
  end
 
  s.destroy=true
@@ -1133,7 +1146,8 @@ function seed:root()
  )
 
  self.anim=cowrap(
-  "root",seedroot_anim,self,t
+  "root",seedroot_anim,self,t,
+  self.player.use_sfx
  )
 
  --anim destroys seed
@@ -1182,7 +1196,8 @@ function seed:update()
   ) then
    self.anim=cowrap(
     "waterdrop",
-    waterdrop_anim,self
+    waterdrop_anim,self,
+    self.player.use_sfx
    )
   end
  else
@@ -1351,12 +1366,14 @@ function tree:_can_drop(
 end
 
 function tree:_dropseeds()
+ local use_sfx=self.player.use_sfx
+
  for s in all(self.seeds) do
   hgrid:del(s)
 
   local kills={}
-  local drop_sfx=true
-  local splat_sfx=true
+  local drop_sfx=use_sfx
+  local splat_sfx=use_sfx
   if self:_can_drop(
    s,kills
   ) then
@@ -1721,7 +1738,7 @@ function cplayer:update()
  self.switch_count-=1
  if self.switch_count<0 then
   self.selected_idx+=1
-  self.switch_count=15
+  self.switch_count=60
  end
 
  if self.selected_idx>ns then
@@ -1731,8 +1748,10 @@ function cplayer:update()
  local s=self.seeds[
   self.selected_idx
  ]
- if s.age>=self.root_age then
-  s:root()
+ if (
+  s.age>=self.root_age
+  and s:root()
+ ) then
   self:_nxt_rooting()
  end
 end
@@ -1788,10 +1807,12 @@ function game:load_level(level)
  self.players={}
  local trees={}
  for i,p in pairs(ld.plyrs) do
+  local is_human=(i==1)
   local plyr={
-   pal=player_pals[i]
+   pal=player_pals[i],
+   use_sfx=is_human
   }
-  if i==1 then
+  if is_human then
    plyr=hplayer:new(plyr)
   else
    plyr=cplayer:new(plyr)
@@ -1837,10 +1858,6 @@ function game:update()
 
  local human=self.players[1]
  local winner=self.goal.winner
-
--- if btnp(🅾️) then
---  winner=human
--- end
 
  local msg={}
  if winner!=nil then
