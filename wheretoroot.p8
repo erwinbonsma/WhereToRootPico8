@@ -182,8 +182,10 @@ function stats:new()
 
  dset(0,vmajor)
  dset(1,vminor)
- dset(10,1000)
- dset(11,6000)
+
+--temp:xplicit clear new levels
+-- dset(10,1000)
+-- dset(11,6000)
 
  return o
 end
@@ -1120,7 +1122,7 @@ end
 function seed:can_root()
  return (
   self.anim==nil or
-  self.rotting
+  self.anim.name=="rot"
  ) and
  not grid:isbarren(
   self.x,self.y
@@ -1174,7 +1176,6 @@ function seed:update()
  self.age+=self.growrate
 
  if self.age>1 then
-  self.rotting=true
   self.anim=cowrap(
    "rot",seedrot_anim,self
   )
@@ -1728,7 +1729,7 @@ function cplayer:new(o)
 end
 
 function cplayer:_nxt_rooting()
- self.root_age=0.2+rnd(0.7)
+ self.root_age=0.2+rnd(0.6)
 end
 
 function cplayer:update()
@@ -1738,7 +1739,7 @@ function cplayer:update()
  self.switch_count-=1
  if self.switch_count<0 then
   self.selected_idx+=1
-  self.switch_count=60
+  self.switch_count=15
  end
 
  if self.selected_idx>ns then
@@ -1748,11 +1749,13 @@ function cplayer:update()
  local s=self.seeds[
   self.selected_idx
  ]
- if (
-  s.age>=self.root_age
-  and s:root()
+ if ((
+   s.age>=self.root_age
+   or not s.moving
+  ) and s:root()
  ) then
   self:_nxt_rooting()
+  self.switch_count+=30
  end
 end
 
