@@ -4,6 +4,10 @@ __lua__
 -- where to root? v0.3
 -- (c) 2023  eriban
 
+--cartdata
+vmajor=0
+vminor=1
+
 frate=30
 seed_r=2.2
 tree_r=3
@@ -69,13 +73,6 @@ level_defs={{
   mapdef={45,0,15,15},
   goals={{2,2,4,4},{9,2,4,4},{2,9,4,4},{9,9,4,4}},
   plyrs={{32,32}}
- }
-},{
- name="fancy",
- data={
-  mapdef={17,18},
-  goals={{3,3,4,4},{9,5,4,4},{3,9,4,4},{9,11,4,4}},
-  plyrs={{39,39},{88,55},{39,87},{88,103}}
  }
 }}
 
@@ -164,7 +161,20 @@ function stats:new()
  local o=setmetatable({},self)
  self.__index=self
 
- o.lvls={}
+ cartdata("eriban_where2root")
+ if (
+  dget(0)!=vmajor or
+  dget(1)<vminor
+ ) then
+  --reset incompatible data
+  for l=1,#level_defs do
+   dset(l*2,1000)
+   dset(l*2+1,6000)
+  end
+ end
+
+ dset(0,vmajor)
+ dset(1,vminor)
 
  return o
 end
@@ -172,25 +182,24 @@ end
 function stats:mark_done(
  level,time_taken,total_trees
 )
- local cur=self.lvls[level] or {}
- self.lvls[level]={
-  time_taken=min(
-   time_taken,
-   cur.time_taken or 5999
-  ),
-  total_trees=min(
-   total_trees,
-   cur.total_trees or 999
-  )
- }
+ local cur=self:get_stats(level)
+ dset(level*2,
+  min(cur.total_trees,
+   min(total_trees,999)))
+ dset(level*2+1,
+  min(cur.time_taken,
+   min(time_taken,5999)))
 end
 
 function stats:is_done(level)
- return self.lvls[level]!=nil
+ return dget(level*2)<1000
 end
 
 function stats:get_stats(level)
- return self.lvls[level]
+ return {
+  total_trees=dget(level*2),
+  time_taken=dget(level*2+1)
+ }
 end
 
 levelmenu={}
@@ -217,7 +226,10 @@ function levelmenu:new(
 
  for p=19,0,-1 do
   o:_setpos(p)
-  if stats:is_done(o.lvl) then
+  if (
+   o.lvl!=0
+   and stats:is_done(o.lvl)
+  ) then
    o:_addtree(1)
   end
  end
