@@ -800,7 +800,7 @@ function cellgrid:draw_units(
  local unit=(
   start_unit or self.head._nxt
  )
- maxy=maxy or self.nrows*6
+ maxy=maxy or self.nrows*8
 
  while unit.y<maxy do
   unit:draw()
@@ -1869,7 +1869,10 @@ function game:load_level(level)
   ncols=ld.mapdef[3],
   nrows=ld.mapdef[4]
  })
- hgrid=cellgrid:new()
+ hgrid=cellgrid:new({
+  ncols=grid.ncols,
+  nrows=grid.nrows
+ })
 
  self.players={}
  local trees={}
