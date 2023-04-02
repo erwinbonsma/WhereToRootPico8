@@ -1114,10 +1114,8 @@ function seed:new(dx,dy,o)
  o.dx=dx
  o.dy=dy
  o.age=0
- o.growrate=(
-  0.04+rnd(0.02)
- )/frate
- o.speed=o.speed or 2
+ o.growrate=0.06/frate
+ o.speed=o.speed or 4
  o.moving=true
  o.selected=false
  o.anim=nil
@@ -1267,7 +1265,8 @@ function seed:draw()
 
  if self.selected then
   spr(
-   self:can_root() and 5 or 6,
+   self.player:can_root()
+   and 5 or 6,
    self.x-3,y-7
   )
  end
@@ -1555,6 +1554,7 @@ function player:new(o)
  o.seeds={}
  o.trees={}
  o.total_trees=0
+ o.root_cooldown=0
 
  return o
 end
@@ -1602,6 +1602,30 @@ function player:unit_removed(
  end
 
  return true
+end
+
+--returns true iff the player
+--is allowed to start a root
+--action (ignoring if current
+--seed can root)
+function player:can_root()
+ return self.root_cooldown<=0
+end
+
+function player:try_root(seed)
+ if (
+  self:can_root()
+  and seed:root()
+ ) then
+  self.root_cooldown=30
+  return true
+ end
+
+ return false
+end
+
+function player:update()
+ self.root_cooldown-=1
 end
 
 --human player
@@ -1710,10 +1734,7 @@ function hplayer:_try_move(
  dx,dy
 )
  local nxt=nil
- if (
-  self.selected!=nil and
-  not self.selected:is_rooting()
- ) then
+ if self:can_root() then
   nxt=self:_find_next(dx,dy)
  end
 
@@ -1727,6 +1748,8 @@ function hplayer:_try_move(
 end
 
 function hplayer:update()
+ player.update(self)
+
  if btnp(⬅️) then
   self:_try_move(-1,0)
  end
@@ -1742,7 +1765,9 @@ function hplayer:update()
  if btnp(❎) then
   if (
    self.selected==nil or
-   not self.selected:root()
+   not self:try_root(
+    self.selected
+   )
   ) then
    sfx(13)
   end
@@ -1770,6 +1795,8 @@ function cplayer:_nxt_rooting()
 end
 
 function cplayer:update()
+ player.update(self)
+
  local ns=#self.seeds
  if (ns==0) return
 
@@ -1790,10 +1817,9 @@ function cplayer:update()
    s.age>=self.root_age
    or not s.moving
    or s:approaching_water()
-  ) and s:root()
+  ) and self:try_root(s)
  ) then
   self:_nxt_rooting()
-  self.switch_count+=30
  end
 end
 
