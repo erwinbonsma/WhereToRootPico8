@@ -19,7 +19,7 @@ seeddrop_h=6
 
 cellsz=8
 roots_r=16
-max_growrate=0.05/frate
+max_growrate=0.1/frate
 
 player_pals={
  {--red
@@ -426,6 +426,9 @@ function levelmenu:update()
  end
  if btnp(⬇️) and self.cy<4 then
   self:_try_move(4)
+ end
+ if btnp(🅾️) then
+  scene=mainmenu
  end
  if btnp(❎) then
   scene=game:new(
@@ -1175,7 +1178,7 @@ function seed:new(dx,dy,o)
  o.dy=dy
  o.age=0
  o.growrate=0.06/frate
- o.speed=o.speed or 4
+ o.speed=o.speed or 6
  o.moving=true
  o.selected=false
  o.anim=nil
@@ -1677,7 +1680,7 @@ function player:try_root(seed)
   self:can_root()
   and seed:root()
  ) then
-  self.root_cooldown=30
+  self.root_cooldown=15
   return true
  end
 
