@@ -176,6 +176,48 @@ function extend(clz,baseclz)
  end
 end
 
+mainmenu={}
+function mainmenu:new()
+ local o=setmetatable({},self)
+ self.__index=self
+
+ o.row=1
+ o.rows={
+  "play",
+  "stats",
+  "help"
+ }
+
+ return o
+end
+
+function mainmenu:update()
+ if btnp(⬆️) then
+  self.row=
+   (self.row+1)%#self.rows+1
+ end
+ if btnp(⬇️) then
+  self.row=1+self.row%#self.rows
+ end
+ if btnp(❎) then
+  if self.row==1 then
+   scene=levelmenu
+  end
+  if self.row==2 then
+   scene=stats
+  end
+ end
+end
+
+function mainmenu:draw()
+ cls(1)
+
+ for n,s in pairs(self.rows) do
+  color(n==self.row and 11 or 3)
+  print(s,20,n*8+60) 
+ end
+end
+
 stats={}
 
 function stats:new()
@@ -225,6 +267,29 @@ function stats:get_stats(level)
   total_trees=dget(level*2),
   time_taken=dget(level*2+1)
  }
+end
+
+function stats:stats_str(level)
+ local s=self:get_stats(level)
+ local arrow=" \^:08083e1c08000000"
+ return "⧗"..time_str(
+  s.time_taken
+ )..arrow..s.total_trees
+end
+
+function stats:update()
+ if btnp(❎) then
+  scene=mainmenu
+ end
+end
+
+function stats:draw()
+ cls(1)
+ color(3)
+ for n,ld in pairs(level_defs) do
+  print(ld.name,0,n*6)
+  print(self:stats_str(n),32,n*6)
+ end
 end
 
 levelmenu={}
@@ -425,15 +490,11 @@ function levelmenu:draw()
  if self.stats:is_done(
   self.lvl
  ) then
-  local s=self.stats:get_stats(
+  local s=self.stats:stats_str(
    self.lvl
   )
-  local arrow=" \^:08083e1c08000000"
-  s="⧗"..time_str(
-   s.time_taken
-  )..arrow..s.total_trees
   print(
-   s,108-(#s-#arrow)*4,120,9
+   s,185-#s*4,120,9
   )
  end
 end
@@ -1100,7 +1161,7 @@ function gameend_anim(args)
 
  wait(90)
 
- scene=menu
+ scene=mainmenu
 end
 -->8
 --seed
@@ -1835,12 +1896,11 @@ function _init()
   [6]=-15
  },1)
 
- progress_stats=stats:new()
- menu=levelmenu:new(
-  progress_stats
- )
+ stats=stats:new()
+ levelmenu=levelmenu:new(stats)
+ mainmenu=mainmenu:new()
 
- scene=menu
+ scene=mainmenu
 end
 
 game={}
