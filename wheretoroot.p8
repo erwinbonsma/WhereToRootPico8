@@ -1307,6 +1307,9 @@ function seed:can_root()
  ) and
  not grid:isbarren(
   self.x,self.y
+ ) and
+ not grid:iswater(
+  self.x,self.y
  )
 end
 
