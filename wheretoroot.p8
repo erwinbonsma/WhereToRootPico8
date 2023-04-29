@@ -47,8 +47,7 @@ levelmenu_pos={
  1,2,3,8,
  5,7,4,6,
  9,0,10,11,
- 0,0,0,0,
- 0,0,0,0
+ 12,0,0,0,
 }
 
 level_defs={{
@@ -132,6 +131,8 @@ level_defs={{
   plyrs={{20,20}},
   goals={{12,12,3,3}}
  }
+},{
+ name="test"
 }}
 
 --sprite flags
@@ -283,8 +284,8 @@ function stats:new()
 --temp:xplicit clear new levels
 -- dset(2,1000)
 -- dset(3,6000)
--- dset(22,1000)
--- dset(23,6000)
+ dset(24,1000)
+ dset(25,6000)
 
  return o
 end
@@ -330,7 +331,12 @@ function stats:draw()
  color(3)
  for n,ld in pairs(level_defs) do
   print(ld.name,0,n*6)
-  print(self:stats_str(n),32,n*6)
+  if self:is_done(n) then
+   print(
+    self:stats_str(n),
+    32,n*6
+   )
+  end
  end
 end
 
@@ -356,7 +362,7 @@ function levelmenu:new(
   o.vbridges[b]=true
  end
 
- for p=19,0,-1 do
+ for p=15,0,-1 do
   o:_setpos(p)
   if (
    o.lvl!=0
