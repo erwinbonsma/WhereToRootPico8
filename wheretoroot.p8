@@ -1811,6 +1811,9 @@ function hplayer:new(o)
  setmetatable(o,self)
 
  o.selected=nil
+ o.cx=grid.nrows*4
+ o.cy=grid.ncols*4
+ o.cursor_moving=true
 
  o._up={
   [o.trees]=o.fruit,
@@ -1834,6 +1837,7 @@ function hplayer:_select(obj)
  if obj!=nil then
   assert(self.selected==nil)
   self.selected=obj
+  self.cursor_moving=true
  end
 end
 
@@ -1974,11 +1978,29 @@ function hplayer:_can_root_obj(
  obj
 )
  return (
-  self:can_root()
+  not self.cursor_moving
+  and self:can_root()
   and isseed(obj)
   and obj.grid==grid
   and obj:can_root()
  )
+end
+
+function hplayer:update_cursor()
+ local sel=self.selected
+ if self.cursor_moving then
+  self.cx=0.25*self.selected.x
+   +0.75*self.cx
+  self.cy=0.25*self.selected.y
+   +0.75*self.cy
+  self.cursor_moving=vlen(
+   self.cx-sel.x,
+   self.cy-sel.y
+  )>2
+ else
+  self.cx=sel.x
+  self.cy=sel.y
+ end
 end
 
 function hplayer:update()
@@ -2008,20 +2030,21 @@ function hplayer:update()
    sfx(13)
   end
  end
+
+ self:update_cursor()
 end
 
 function hplayer:draw()
  --selection arrow
  local sel=self.selected
- local y=
-  flr(sel.y*yscale)-sel.h-5
 
  pal(6,9)
  pal(7,10)
  spr(
   self:_can_root_obj(sel)
    and 5 or 6,
-  sel.x-3,y-7
+  self.cx-3,
+  flr(self.cy*yscale)-sel.h-12
  )
  pal()
 end
