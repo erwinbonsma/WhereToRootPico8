@@ -1842,7 +1842,6 @@ function hplayer:_select(obj)
 end
 
 function hplayer:unit_added(obj)
- printh("unit_added")
  if (
   player.unit_added(self,obj)
   and self.selected==nil
@@ -1854,7 +1853,6 @@ end
 function hplayer:unit_removed(
  obj
 )
- printh("unit_removed")
  if (
   player.unit_removed(self,obj)
   and obj==self.selected
@@ -1877,13 +1875,10 @@ end
 function hplayer:_find_closest(
  x,y,l_ini,pred,dist
 )
- printh("_find_closest")
-
  local dmin=1000
  local closest=nil
 
  local search=function(l)
-  printh("search "..#l)
   for obj in all(l) do
    if pred(obj) then
     local d=dist(
@@ -1912,12 +1907,6 @@ function hplayer:_find_closest(
  while closest==nil and l!=nil do
   search(l)
   l=self._down[l]
- end
-
- if closest!=nil then
-  printh("found closest")
- else
-  printh("found nothing")
  end
 
  return closest
