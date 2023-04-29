@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
--- where to root? v0.3
+-- where to root? v0.4
 -- (c) 2023  eriban
 
 --cartdata
@@ -111,7 +111,11 @@ level_defs={{
  data={
   mapdef={0,15,15,15},
   goals={{1,1,5,5},{9,9,5,5},{9,1,5,5},{1,9,5,5}},
-  plyrs={{28,28},{92,92},{92,28},{28,92}}
+  plyrs={{28,28},{92,92},{92,28},{28,92}},
+  params={
+   maxgrowrate=
+    default_maxgrowrate*0.5
+  }
  }
 },{
  name="checker",
@@ -218,48 +222,6 @@ function extend(clz,baseclz)
  end
 end
 
-mainmenu={}
-function mainmenu:new()
- local o=setmetatable({},self)
- self.__index=self
-
- o.row=1
- o.rows={
-  "play",
-  "stats",
-  "help"
- }
-
- return o
-end
-
-function mainmenu:update()
- if btnp(⬆️) then
-  self.row=
-   (self.row+1)%#self.rows+1
- end
- if btnp(⬇️) then
-  self.row=1+self.row%#self.rows
- end
- if btnp(❎) then
-  if self.row==1 then
-   scene=levelmenu
-  end
-  if self.row==2 then
-   scene=stats
-  end
- end
-end
-
-function mainmenu:draw()
- cls(1)
-
- for n,s in pairs(self.rows) do
-  color(n==self.row and 11 or 3)
-  print(s,20,n*8+60) 
- end
-end
-
 stats={}
 
 function stats:new()
@@ -284,8 +246,8 @@ function stats:new()
 --temp:xplicit clear new levels
 -- dset(2,1000)
 -- dset(3,6000)
- dset(24,1000)
- dset(25,6000)
+-- dset(24,1000)
+-- dset(25,6000)
 
  return o
 end
@@ -322,19 +284,28 @@ end
 
 function stats:update()
  if btnp(❎) then
-  scene=mainmenu
+  scene=levelmenu
  end
 end
 
 function stats:draw()
- cls(1)
- color(3)
+ cls(0)
+
+ print(
+  "level   time   trees",
+  24,10,9
+ )
+
+ color(4)
+ print("where to root?",35,0)
+
  for n,ld in pairs(level_defs) do
-  print(ld.name,0,n*6)
+  local y=n*8+10
+  print(ld.name,24,y)
   if self:is_done(n) then
    print(
     self:stats_str(n),
-    32,n*6
+    56,y
    )
   end
  end
@@ -358,7 +329,7 @@ function levelmenu:new(
   o.hbridges[b]=true
  end
  o.vbridges={}
- for b in all({2,3,4,6,7}) do
+ for b in all({2,3,4,5,6,7}) do
   o.vbridges[b]=true
  end
 
@@ -475,12 +446,13 @@ function levelmenu:update()
  if btnp(⬇️) and self.cy<4 then
   self:_try_move(4)
  end
- if btnp(🅾️) then
-  scene=mainmenu
- end
  if btnp(❎) then
-  scene=game:new(self.lvl)
-  sfx(3)
+  if self.lvl>0 then
+   scene=game:new(self.lvl)
+   sfx(3)
+  else
+   scene=stats
+  end
  end
 
  if (
@@ -530,6 +502,11 @@ function levelmenu:draw()
  camera()
 
  print("where to root?",37,2,4)
+
+ if self.lvl==0 then
+  print("stats",4,120,4)
+  return
+ end
 
  local name=level_defs[
   self.lvl
@@ -1881,16 +1858,6 @@ function hplayer:_find_closest(
  local closest=nil
 
  local search=function(l)
-  if l==self.trees then
-   printh("searching trees")
-  end
-  if l==self.fruit then
-   printh("searching fruit")
-  end
-  if l==self.seeds then
-   printh("searching seeds")
-  end
-
   for obj in all(l) do
    if pred(obj) then
     local d=dist(
@@ -1899,7 +1866,6 @@ function hplayer:_find_closest(
     if d<=dmin then
      dmin=d
      closest=obj
-     printh("found @ "..d)
     end
    end
   end
@@ -2124,8 +2090,6 @@ end
 --main
 
 function _init()
- printh("*** _init() ***")
-
  pal({
   [1]=-16,--dark brown (bg)
   [8]=-8, --dark red
@@ -2136,9 +2100,8 @@ function _init()
 
  stats=stats:new()
  levelmenu=levelmenu:new(stats)
- mainmenu=mainmenu:new()
 
- scene=mainmenu
+ scene=levelmenu
 end
 
 game={}
@@ -2240,9 +2203,6 @@ function game:update()
  local human=self.players[1]
  local winner=self.goal.winner
  self.time_taken=time()-self.start
- if btnp(🅾️) then
-  winner=human
- end
 
  if self.time_taken<0 then
   self.msg="timed out"
