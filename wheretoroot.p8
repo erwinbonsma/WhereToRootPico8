@@ -1864,7 +1864,7 @@ function hplayer:unit_removed(
   self:_unselect()
   self:_select(
    self:_find_closest(
-    obj.x,obj.y,l,pred_true
+    obj.x,obj.y,l,pred_true,vlen
    )
   )
  end
@@ -1873,8 +1873,9 @@ end
 --l_ini: initial search scope
 --pred: optional filter on
 --      objects to consider
+--dist: distance function
 function hplayer:_find_closest(
- x,y,l_ini,pred
+ x,y,l_ini,pred,dist
 )
  printh("_find_closest")
 
@@ -1885,7 +1886,7 @@ function hplayer:_find_closest(
   printh("search "..#l)
   for obj in all(l) do
    if pred(obj) then
-    local d=vlen(
+    local d=dist(
      obj.x-x,obj.y-y
     )
     if d<=dmin then
@@ -1939,19 +1940,32 @@ function hplayer:_find_next(
   if (my<0) return false
 
   --direction matches
-  if (
-   (dx!=0)==(abs(vx)<=abs(vy))
-  ) then
-   --not in target quadrant
-   return false
+
+  --check if object is inside
+  --the "extended" quadrant
+  if dx!=0 then
+   return abs(vx*2)>abs(vy)
+  else
+   return abs(vy*2)>abs(vx)
   end
 
   return true
  end
 
+ local dist
+ if dy!=0 then
+  dist=function(dx,dy)
+   return abs(dy*0.25)+abs(dx)
+  end
+ else
+  dist=function(dx,dy)
+   return abs(dx*0.25)+abs(dy)
+  end
+ end
+
  local l=self:_listfor(sel)
  local nxt=self:_find_closest(
-  sel.x,sel.y,l,pred
+  sel.x,sel.y,l,pred,dist
  )
 
  return nxt
@@ -1988,6 +2002,8 @@ end
 
 function hplayer:update_cursor()
  local sel=self.selected
+ if (sel==nil) return
+
  if self.cursor_moving then
   self.cx=0.25*self.selected.x
    +0.75*self.cx
@@ -2037,6 +2053,7 @@ end
 function hplayer:draw()
  --selection arrow
  local sel=self.selected
+ if (sel==nil) return
 
  pal(6,9)
  pal(7,10)
@@ -2246,7 +2263,7 @@ function game:update()
    sfx(8)
   end
  elseif (
-  #human.seeds+#human.trees==0
+  human.selected==nil
  ) then
   add(msg,"game over")
   sfx(8)
