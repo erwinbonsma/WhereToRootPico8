@@ -22,6 +22,8 @@ roots_r=16
 default_maxgrowrate=0.1/frate
 maxgrowrate=default_maxgrowrate
 
+treechar="\^:1c221c0808000000"
+
 player_pals={
  {--red
   [6]=8,[5]=2,[7]=14
@@ -277,6 +279,8 @@ function stats:new()
  dset(1,vminor)
 
 --temp:xplicit clear new levels
+-- dset(2,1000)
+-- dset(3,6000)
 -- dset(22,1000)
 -- dset(23,6000)
 
@@ -308,10 +312,9 @@ end
 
 function stats:stats_str(level)
  local s=self:get_stats(level)
- local arrow=" \^:08083e1c08000000"
  return "⧗"..time_str(
   s.time_taken
- )..arrow..s.total_trees
+ ).." "..treechar..s.total_trees
 end
 
 function stats:update()
@@ -468,9 +471,7 @@ function levelmenu:update()
   scene=mainmenu
  end
  if btnp(❎) then
-  scene=game:new(
-   self.lvl,self.stats
-  )
+  scene=game:new(self.lvl)
   sfx(3)
  end
 
@@ -1260,15 +1261,10 @@ function seedrot_anim(args)
  s.destroy=true
 end
 
-function gameend_anim(args)
- local g=args[1]
- local msg=args[2]
+function gameend_anim()
+ wait(180)
 
- g.msg=msg
-
- wait(90)
-
- scene=mainmenu
+ scene=levelmenu
 end
 -->8
 --seed
@@ -2134,13 +2130,13 @@ function _init()
 end
 
 game={}
-function game:new(level,stats)
+function game:new(level)
  local o=setmetatable({},self)
  self.__index=self
 
  o:load_level(level)
- o.stats=stats
  o.start=time()
+ o.time_taken=0
 
  return o
 end
@@ -2228,47 +2224,47 @@ function game:update()
   p:update()
  end
 
+ local end_sfx=8
  local human=self.players[1]
  local winner=self.goal.winner
+ self.time_taken=time()-self.start
+ if btnp(🅾️) then
+  winner=human
+ end
 
- local msg={}
- if winner!=nil then
+ if self.time_taken<0 then
+  self.msg="timed out"
+ elseif winner!=nil then
   if winner==human then
-   local time_taken=(
-    time()-self.start
+   stats:mark_done(
+    self.level,
+    self.time_taken,
+    human.total_trees
    )
-   local tt=winner.total_trees
-   if (time_taken<0) then
-    --guard against wrapping
-    time_taken=999
-   end
-   self.stats:mark_done(
-    self.level,time_taken,tt
+   local s=stats:get_stats(
+    self.level
    )
-   add(msg,"level complete!")
-   add(msg,"")
-   add(
-    msg,"⧗"..time_str(
-     time_taken
-    )
+   self.time_hi=(
+    s.time_taken==self.time_taken
    )
-   add(msg,tt.." trees planted")
-   sfx(4)
+   self.tree_hi=(
+    s.total_trees==human.total_trees
+   )
+   self.msg="you did it!"
+   end_sfx=4
   else
-   add(msg,"beaten by bots")
-   sfx(8)
+   self.msg="beaten by bots"
   end
  elseif (
   human.selected==nil
  ) then
-  add(msg,"game over")
-  sfx(8)
+  self.msg="game over"
  end
 
- if #msg>0 then
+ if self.msg!=nil then
+  sfx(end_sfx)
   self.anim=cowrap(
-   "gameend",
-   gameend_anim,self,msg
+   "gameend",gameend_anim
   )
  end
 end
@@ -2300,14 +2296,22 @@ function game:draw()
 
  self.goal:draw()
  if self.msg!=nil then
-  local y=63-3*#self.msg
-  local c=7
-  for txt in all(self.msg) do
-   print(txt,63-#txt*2,y,c)
-   y+=6
-   c=4
-  end
+  print(
+   self.msg,64-#self.msg*2,63,7
+  )
  end
+
+ print(
+  "⧗"..time_str(self.time_taken),
+  4,122,
+  self.time_hi and 11 or 4
+ )
+ local human=self.players[1]
+ print(
+  treechar..human.total_trees,
+  32,122,
+  self.tree_hi and 11 or 4
+ )
 end
 
 function _draw()
