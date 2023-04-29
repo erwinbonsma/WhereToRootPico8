@@ -2308,13 +2308,6 @@ function game:draw()
    c=4
   end
  end
-
- local human=self.players[1]
- print(
-  "#t="..#human.trees..
-  " #f="..#human.fruit..
-  " #s="..#human.seeds,
-  64,0,7)
 end
 
 function _draw()
