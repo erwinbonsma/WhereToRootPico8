@@ -159,6 +159,10 @@ function time_str(t)
  )
 end
 
+function pred_true()
+ return true
+end
+
 --wrap coroutine with a name to
 --facilitate debugging crashes
 function cowrap(
@@ -640,11 +644,12 @@ end
 function cellgrid:del(obj)
  self:_remove(obj)
  assert(obj.grid==self)
- obj.grid=nil
 
  for o in all(self.observers) do
   o:unit_removed(obj)
  end
+
+ obj.grid=nil
 end
 
 function cellgrid:moved(obj)
@@ -1430,14 +1435,6 @@ function seed:draw()
   )
  end
 
- if self.selected then
-  spr(
-   self.player:can_root()
-   and 5 or 6,
-   self.x-3,y-7
-  )
- end
-
  pal(0)
 end
 
@@ -1501,6 +1498,7 @@ function tree:new(x,y,o)
 
  o.x=x
  o.y=y
+ o.h=0
  o.r=o.r or tree_r
  o.maxseeds=o.maxseeds or 3
 
@@ -1627,6 +1625,9 @@ function tree:update()
   self.rate_refresh+=0.1
  end
  self.age+=self.growrate
+ self.h=flr(
+  min(self.age,0.25)*4*tree_h
+ )
 
  if (self.age<0.7) return
 
@@ -1662,10 +1663,7 @@ tree_sprites={
 
 --draws the trunk
 function tree:draw()
- local h=flr(
-  min(self.age,0.25)*4*tree_h
- )
-
+ local h=self.h
  local x=self.x
  local y=flr(self.y*yscale)
  line(x-1,y,x-1,y-h,4)
@@ -1720,6 +1718,8 @@ function player:new(o)
 
  o.seeds={}
  o.trees={}
+ o.fruit={}
+
  o.total_trees=0
  o.root_cooldown=0
 
@@ -1728,7 +1728,11 @@ end
 
 function player:_listfor(obj)
  if isseed(obj) then
-  return self.seeds
+  if obj.grid==grid then
+   return self.seeds
+  end
+  assert(obj.grid==hgrid)
+  return self.fruit
  end
  if istree(obj) then
   return self.trees
@@ -1779,10 +1783,10 @@ function player:can_root()
  return self.root_cooldown<=0
 end
 
-function player:try_root(seed)
+function player:try_root(obj)
  if (
   self:can_root()
-  and seed:root()
+  and obj:root()
  ) then
   self.root_cooldown=15
   return true
@@ -1795,6 +1799,9 @@ function player:update()
  self.root_cooldown-=1
 end
 
+function player:draw()
+end
+
 --human player
 hplayer={}
 extend(hplayer,player)
@@ -1805,6 +1812,17 @@ function hplayer:new(o)
  setmetatable(o,self)
 
  o.selected=nil
+
+ o._up={
+  [o.trees]=o.fruit,
+  [o.fruit]=o.seeds,
+  [o.seeds]=nil
+ }
+ o._down={
+  [o.trees]=nil,
+  [o.fruit]=o.trees,
+  [o.seeds]=o.fruit
+ }
 
  return o
 end
@@ -1825,10 +1843,10 @@ function hplayer:_select(obj)
 end
 
 function hplayer:unit_added(obj)
+ printh("unit_added")
  if (
   player.unit_added(self,obj)
-  and isseed(obj)
-  and #self.seeds==1
+  and self.selected==nil
  ) then
   self:_select(obj,true)
  end
@@ -1837,61 +1855,105 @@ end
 function hplayer:unit_removed(
  obj
 )
+ printh("unit_removed")
  if (
   player.unit_removed(self,obj)
   and obj==self.selected
+  and obj.grid!=hgrid
  ) then
+  local l=self:_listfor(obj)
   self:_unselect()
-  self:_select_closest(
-   obj.x,obj.y
+  self:_select(
+   self:_find_closest(
+    obj.x,obj.y,l,pred_true
+   )
   )
  end
 end
 
-function hplayer:_select_closest(
- x,y
+--l_ini: initial search scope
+--pred: optional filter on
+--      objects to consider
+function hplayer:_find_closest(
+ x,y,l_ini,pred
 )
+ printh("_find_closest")
+
  local dmin=1000
- local nearest=nil
- for s in all(self.seeds) do
-  local d=vlen(s.x-x,s.y-y)
-  if d<dmin then
-   dmin=d
-   nearest=s
+ local closest=nil
+
+ local search=function(l)
+  printh("search "..#l)
+  for obj in all(l) do
+   if pred(obj) then
+    local d=vlen(
+     obj.x-x,obj.y-y
+    )
+    if d<=dmin then
+     dmin=d
+     closest=obj
+    end
+   end
   end
  end
- self:_select(nearest)
+
+ --search initial scope (which
+ --may be a subset, e.g. only
+ --seeds)
+ local l=l_ini
+ while l!=nil do
+  search(l)
+  l=self._up[l]
+ end
+
+ --expand the scope downwards
+ --until something is found
+ l=self._down[l_ini]
+ while closest==nil and l!=nil do
+  search(l)
+  l=self._down[l]
+ end
+
+ if closest!=nil then
+  printh("found closest")
+ else
+  printh("found nothing")
+ end
+
+ return closest
 end
 
 function hplayer:_find_next(
  dx,dy
 )
  local sel=self.selected
- local nxt=nil
- local dmin=2000
- for s in all(self.seeds) do
-  if s!=sel then
-   local vx=s.x-sel.x
-   local vy=s.y-sel.y
-   local mx=vx*dx
-   local my=vy*dy
-   if mx>=0 and my>=0 then
-    --direction matches
-    local d=abs(mx)+abs(my)
-    if (
-     (dx!=0)==(abs(vx)<=abs(vy))
-    ) then
-     --not in target quadrant
-     d+=1000
-    end
 
-    if d<dmin then
-     dmin=d
-     nxt=s
-    end
-   end
+ local pred=function(obj)
+  if (obj==sel) return false
+
+  local vx=obj.x-sel.x
+  local mx=vx*dx
+  if (mx<0) return false
+
+  local vy=obj.y-sel.y
+  local my=vy*dy
+  if (my<0) return false
+
+  --direction matches
+  if (
+   (dx!=0)==(abs(vx)<=abs(vy))
+  ) then
+   --not in target quadrant
+   return false
   end
+
+  return true
  end
+
+ local l=self:_listfor(sel)
+ local nxt=self:_find_closest(
+  sel.x,sel.y,l,pred
+ )
 
  return nxt
 end
@@ -1900,10 +1962,9 @@ end
 function hplayer:_try_move(
  dx,dy
 )
- local nxt=nil
- if self:can_root() then
-  nxt=self:_find_next(dx,dy)
- end
+ local nxt=self:_find_next(
+  dx,dy
+ )
 
  if nxt!=nil then
   self:_unselect()
@@ -1912,6 +1973,17 @@ function hplayer:_try_move(
  else
   sfx(13)
  end
+end
+
+function hplayer:_can_root_obj(
+ obj
+)
+ return (
+  self:can_root()
+  and isseed(obj)
+  and obj.grid==grid
+  and obj:can_root()
+ )
 end
 
 function hplayer:update()
@@ -1930,15 +2002,34 @@ function hplayer:update()
   self:_try_move(0,1)
  end
  if btnp(❎) then
-  if (
-   self.selected==nil or
-   not self:try_root(
+  if not (
+   self:_can_root_obj(
+    self.selected
+   )
+   and self:try_root(
     self.selected
    )
   ) then
    sfx(13)
   end
  end
+end
+
+function hplayer:draw()
+ --selection arrow
+ local y=flr(
+  self.selected.y*yscale
+ )-self.selected.h-5
+
+ pal(6,9)
+ pal(7,10)
+ spr(
+  self:_can_root_obj(
+   self.selected
+  ) and 5 or 6,
+  self.selected.x-3,y-7
+ )
+ pal()
 end
 
 --computer player
@@ -1994,6 +2085,8 @@ end
 --main
 
 function _init()
+ printh("*** _init() ***")
+
  pal({
   [1]=-16,--dark brown (bg)
   [8]=-8, --dark red
@@ -2055,6 +2148,7 @@ function game:load_level(level)
   end
   add(self.players,plyr)
   grid:add_observer(plyr)
+  hgrid:add_observer(plyr)
 
   local t=tree:new(
    p[1],p[2],{player=plyr}
@@ -2168,6 +2262,10 @@ function game:draw()
 
 -- self.goal:draw_debug()
 
+ for p in all(self.players) do
+  p:draw()
+ end
+
  camera()
 
  self.goal:draw()
@@ -2180,6 +2278,13 @@ function game:draw()
    c=4
   end
  end
+
+ local human=self.players[1]
+ print(
+  "#t="..#human.trees..
+  " #f="..#human.fruit..
+  " #s="..#human.seeds,
+  64,0,7)
 end
 
 function _draw()
