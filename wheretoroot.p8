@@ -1026,21 +1026,19 @@ end
 
 function areagoal:draw()
  local x=10
- local y=2
  local c=self.counts
  for p in all(self.players) do
-  y=2
   pal(p.pal)
-  spr(4,x,y-1)
-  x+=7
   for n,a in pairs(self.areas) do
-   print(
-    c[p][a],
-    x+flr((n%4)/2)*4,
-    y+((n+1)%2)*6,6
-   )
+   local sx=x+flr((n%4)/2)*5
+   local sy=2+((n+1)%2)*5
+   if c[p][a]>0 then
+    spr(4,sx,sy)
+   else
+    spr(1,sx,sy-1)
+   end
   end
-  x+=12
+  x+=32
   pal(0)
  end
 end
@@ -1107,17 +1105,19 @@ end
 
 function treegoal:draw()
  local x=10
- local y=2
  local c=self.counts
  for p in all(self.players) do
-  y=2
   pal(p.pal)
-  spr(4,x,y-1)
-  x+=7
-  print(
-   self.counts[p],x,y
-  )
-  x+=12
+  for n=0,self.target-1 do
+   local sy=n%2*5
+   local sx=x+flr(n/2)*5
+   if self.counts[p]>n then
+    spr(4,sx,sy)
+   else
+    spr(1,sx,sy-1)
+   end
+  end
+  x+=26
   pal(0)
  end
 end
