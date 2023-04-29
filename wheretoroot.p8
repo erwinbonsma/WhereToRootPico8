@@ -1286,7 +1286,6 @@ function seed:new(dx,dy,o)
  o.growrate=0.06/frate
  o.speed=o.speed or 6
  o.moving=true
- o.selected=false
  o.anim=nil
  o.si=o.si or 4
  o.h0=0 --ground level
@@ -1828,17 +1827,13 @@ function hplayer:new(o)
 end
 
 function hplayer:_unselect()
- if self.selected!=nil then
-  self.selected.selected=false
-  self.selected=nil
- end
+ self.selected=nil
 end
 
 function hplayer:_select(obj)
  if obj!=nil then
   assert(self.selected==nil)
   self.selected=obj
-  obj.selected=true
  end
 end
 
@@ -2017,17 +2012,16 @@ end
 
 function hplayer:draw()
  --selection arrow
- local y=flr(
-  self.selected.y*yscale
- )-self.selected.h-5
+ local sel=self.selected
+ local y=
+  flr(sel.y*yscale)-sel.h-5
 
  pal(6,9)
  pal(7,10)
  spr(
-  self:_can_root_obj(
-   self.selected
-  ) and 5 or 6,
-  self.selected.x-3,y-7
+  self:_can_root_obj(sel)
+   and 5 or 6,
+  sel.x-3,y-7
  )
  pal()
 end
