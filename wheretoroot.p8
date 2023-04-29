@@ -1920,11 +1920,11 @@ function hplayer:_find_next(
  local pred=function(obj)
   if (obj==sel) return false
 
-  local vx=obj.x-sel.x
+  local vx=obj.x-self.cx
   local mx=vx*dx
   if (mx<0) return false
 
-  local vy=obj.y-sel.y
+  local vy=obj.y-self.cy
   local my=vy*dy
   if (my<0) return false
 
@@ -1954,7 +1954,7 @@ function hplayer:_find_next(
 
  local l=self:_listfor(sel)
  local nxt=self:_find_closest(
-  sel.x,sel.y,l,pred,dist
+  self.cx,self.cy,l,pred,dist
  )
 
  return nxt
@@ -1994,10 +1994,10 @@ function hplayer:update_cursor()
  if (sel==nil) return
 
  if self.cursor_moving then
-  self.cx=0.25*self.selected.x
-   +0.75*self.cx
-  self.cy=0.25*self.selected.y
-   +0.75*self.cy
+  self.cx=0.20*self.selected.x
+   +0.80*self.cx
+  self.cy=0.20*self.selected.y
+   +0.80*self.cy
   self.cursor_moving=vlen(
    self.cx-sel.x,
    self.cy-sel.y
