@@ -525,7 +525,7 @@ function levelmenu:draw()
  local name=level_defs[
   self.lvl
  ].name
- print("level: "..name,4,120,9)
+ print("level: "..name,4,120,4)
 
  if self.stats:is_done(
   self.lvl
@@ -533,9 +533,7 @@ function levelmenu:draw()
   local s=self.stats:stats_str(
    self.lvl
   )
-  print(
-   s,185-#s*4,120,9
-  )
+  print(s,185-#s*4,120,4)
  end
 end
 -->8
@@ -2056,14 +2054,13 @@ function hplayer:draw()
  if (sel==nil) return
 
  pal(6,9)
- pal(7,10)
  spr(
   self:_can_root_obj(sel)
    and 5 or 6,
   self.cx-3,
   flr(self.cy*yscale)-sel.h-12
  )
- pal()
+ pal(0)
 end
 
 --computer player
@@ -2124,10 +2121,9 @@ function _init()
  pal({
   [1]=-16,--dark brown (bg)
   [8]=-8, --dark red
-  [9]=-13,--blue/green
   [5]=-11,--dark grey (tree)
   [10]=-5,--med. green
-  [6]=-15
+  [6]=-15 --dark blue
  },1)
 
  stats=stats:new()
