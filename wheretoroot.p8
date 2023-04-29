@@ -1846,7 +1846,7 @@ function hplayer:unit_added(obj)
   player.unit_added(self,obj)
   and self.selected==nil
  ) then
-  self:_select(obj,true)
+  self:_select(obj)
  end
 end
 
@@ -1858,11 +1858,11 @@ function hplayer:unit_removed(
   and obj==self.selected
   and obj.grid!=hgrid
  ) then
-  local l=self:_listfor(obj)
   self:_unselect()
   self:_select(
    self:_find_closest(
-    obj.x,obj.y,l,pred_true,vlen
+    obj.x,obj.y,self.trees,
+    pred_true,vlen
    )
   )
  end
@@ -1879,6 +1879,16 @@ function hplayer:_find_closest(
  local closest=nil
 
  local search=function(l)
+  if l==self.trees then
+   printh("searching trees")
+  end
+  if l==self.fruit then
+   printh("searching fruit")
+  end
+  if l==self.seeds then
+   printh("searching seeds")
+  end
+
   for obj in all(l) do
    if pred(obj) then
     local d=dist(
@@ -1887,6 +1897,7 @@ function hplayer:_find_closest(
     if d<=dmin then
      dmin=d
      closest=obj
+     printh("found @ "..d)
     end
    end
   end
