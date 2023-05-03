@@ -2243,7 +2243,7 @@ function game:update()
 end
 
 function game:draw()
- cls(1)
+ cls(6)
 
  camera(
   grid.ncols*4-64,
