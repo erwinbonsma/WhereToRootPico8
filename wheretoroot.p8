@@ -222,6 +222,18 @@ function extend(clz,baseclz)
  end
 end
 
+function drawlogo()
+ pal(4,5)
+ spr(32,20,1,11,1)
+ spr(32,19,2,11,1)
+ pal(4,0)
+ spr(32,21,2,11,1)
+ spr(32,20,3,11,1)
+ pal(4,4)
+ spr(32,20,2,11,1)
+ pal(0)
+end
+
 stats={}
 
 function stats:new()
@@ -289,9 +301,9 @@ function stats:update()
 end
 
 function stats:draw()
- cls(6)
+ cls(1)
 
- spr(32,20,2,11,1)
+ drawlogo()
 
  print(
   "level   time   trees",
@@ -499,7 +511,7 @@ function levelmenu:draw()
 
  camera()
 
- spr(32,20,2,11,1)
+ drawlogo()
 
  if self.lvl==0 then
   print("stats",4,120,4)
