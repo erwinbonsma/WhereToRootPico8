@@ -313,13 +313,10 @@ end
 
 levelmenu={}
 
-function levelmenu:new(
- stats
-)
+function levelmenu:new()
  local o=setmetatable({},self)
  self.__index=self
 
- o.stats=stats
  o.grid=cellgrid:new({
   mx=111,my=0,nrows=17,ncols=17
  })
@@ -364,7 +361,7 @@ function levelmenu:_setpos(pos)
  self.cx=pos%4
  self.cy=flr(pos/4)
  self.lvl=levelmenu_pos[pos+1]
- self.tree=self.stats:is_done(
+ self.tree=stats:is_done(
   self.lvl
  )
 
@@ -409,7 +406,7 @@ function levelmenu:_can_move(
  end
 
  for p in all({p1,p2}) do
-  if self.stats:is_done(
+  if stats:is_done(
    levelmenu_pos[p+1]
   ) then
    return true
@@ -457,7 +454,7 @@ function levelmenu:update()
 
  if (
   not self.tree and
-  self.stats:is_done(self.lvl)
+  stats:is_done(self.lvl)
  ) then
   self:_addtree(0)
  end
@@ -513,10 +510,8 @@ function levelmenu:draw()
  ].name
  print("level: "..name,4,120,4)
 
- if self.stats:is_done(
-  self.lvl
- ) then
-  local s=self.stats:stats_str(
+ if stats:is_done(self.lvl) then
+  local s=stats:stats_str(
    self.lvl
   )
   print(s,185-#s*4,120,4)
@@ -1478,8 +1473,8 @@ function tree:new(x,y,o)
  o.x=x
  o.y=y
  o.h=0
- o.r=o.r or tree_r
- o.maxseeds=o.maxseeds or 3
+ o.r=tree_r
+ o.maxseeds=3
 
  o.age=o.age or 0
  o.rate_refresh=0
@@ -2100,7 +2095,7 @@ function _init()
  },1)
 
  stats=stats:new()
- levelmenu=levelmenu:new(stats)
+ levelmenu=levelmenu:new()
 
  scene=levelmenu
 end
