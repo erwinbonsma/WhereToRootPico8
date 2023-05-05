@@ -298,7 +298,7 @@ function stats:stats_str(level)
  local s=self:get_stats(level)
  return "⧗"..time_str(
   s.time_taken
- ).." "..treechar..s.total_trees
+ ).." "..s.total_trees..treechar
 end
 
 function stats:update()
@@ -313,19 +313,26 @@ function stats:draw()
  drawlogo()
 
  print(
-  "level   time   trees",
-  24,14,9
+  "level     time   trees",
+  20,14,9
  )
 
  color(4)
 
  for n,ld in pairs(level_defs) do
   local y=n*7+14
-  print(ld.name,24,y)
+  print(ld.name,20,y)
   if self:is_done(n) then
+   local s=self:get_stats(n)
+   local str=time_str(
+    s.time_taken
+   )
    print(
-    self:stats_str(n),
-    56,y
+    "⧗"..str,76-#str*4,y
+   )
+   str=""..s.total_trees
+   print(
+    str..treechar,102-#str*4,y
    )
   end
  end
