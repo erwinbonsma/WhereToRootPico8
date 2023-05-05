@@ -141,7 +141,6 @@ level_defs={{
  data={
   mapdef={45,15,15,15},
   plyrs={{20,20},{100,20},{20,100},{60,60}},
-  goals={{11,11,3,3}},
   weeds=true
  }
 }}
@@ -1038,8 +1037,8 @@ function areagoal:draw()
    end
   end
   x+=32
-  pal(0)
  end
+ pal(0)
 end
 
 function areagoal:draw_debug()
@@ -1117,10 +1116,68 @@ function treegoal:draw()
    end
   end
   x+=26
-  pal(0)
+ end
+ pal(0)
+end
+
+killgoal={}
+function killgoal:new(
+ grid,players
+)
+ local o=setmetatable({},self)
+ self.__index=self
+
+ o.grid=grid
+ o.players=players
+
+ o.counts={}
+ for plyr in all(players) do
+  o.counts[plyr]=0
+ end
+ o.total=0
+ o.winner=nil
+
+ return o
+end
+
+function killgoal:unit_added(
+ unit
+)
+ local plyr=unit.player
+ self.counts[plyr]+=1
+ self.total+=1
+end
+
+function killgoal:unit_removed(
+ unit
+)
+ local plyr=unit.player
+ local c=self.counts
+ c[plyr]-=1
+ self.total-=1
+ if (c[plyr]>0) return
+
+ for p in all(self.players) do
+  if c[p]==self.total then
+   self.winner=p
+  end
  end
 end
 
+function killgoal:draw()
+ local sy=0
+ local sx=8
+ for p in all(self.players) do
+  pal(p.pal)
+  if self.counts[p]>0 then
+   spr(5,sx,sy)
+  else
+   spr(1,sx,sy-1)
+  end
+  sx+=8
+ end
+ pal(0)
+end
 -->8
 --animations
 
@@ -2202,9 +2259,11 @@ function game:load_level(level)
   end
 
   self.goal=areagoal:new(
-   areas,(ld.weeds
-    and {self.players[1]}
-    or self.players)
+   areas,self.players
+  )
+ elseif ld.weeds then
+  self.goal=killgoal:new(
+   grid,self.players
   )
  else
   self.goal=treegoal:new(
