@@ -11,7 +11,8 @@ vminor=1
 frate=60
 seed_r=2.2
 tree_r=3
-max_r=max(seed_r,tree_r)
+root_r=5
+max_r=root_r
 tree_h=5
 branch_l=8
 yscale=0.75
@@ -282,8 +283,8 @@ function stats:new()
 --temp:xplicit clear new levels
 -- dset(2,1000)
 -- dset(3,6000)
- dset(27,1000)
- dset(28,6000)
+-- dset(28,1000)
+-- dset(29,6000)
 
  return o
 end
@@ -1325,7 +1326,7 @@ function seedroot_anim(args)
   wait(20)
  end
 
- if s:_tree_fits(t) then
+ if t:fits() then
   grid:add(t)
  else
   if (use_sfx) sfx(14)
@@ -1375,24 +1376,6 @@ function seed:new(dx,dy,o)
  o.h0=0 --ground level
 
  return o
-end
-
---check if tree fits. it may
---hit seeds, but not another
---tree
-function seed:_tree_fits(t)
- local fits=true
- local visitor=function(obj)
-  if istree(obj) then
-   fits=false
-  end
- end
-
- grid:visit_hits(
-  t.x,t.y,t.r,visitor,self
- )
-
- return fits
 end
 
 function seed:can_root()
@@ -1699,6 +1682,25 @@ function tree:_update_growrate()
  )
 
  self.growrate=maxgrowrate/c
+end
+
+--check if tree fits. there
+--should not be another tree
+--nearby
+function tree:fits()
+ local fits=true
+ local visitor=function(obj)
+  if istree(obj) then
+   fits=false
+  end
+ end
+
+ grid:visit_hits(
+  self.x,self.y,root_r,
+  visitor
+ )
+
+ return fits
 end
 
 function tree:update()
@@ -2150,7 +2152,7 @@ function cplayer:try_root(obj)
   self:can_root()
   and obj:root()
  ) then
-  self.root_cooldown=30
+  self.root_cooldown=60
   return true
  end
 
