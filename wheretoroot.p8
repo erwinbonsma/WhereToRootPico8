@@ -162,6 +162,8 @@ level_defs={{
   plyrs={{24,64},{64,32},{64,96},{104,64}},
   weeds=true
  }
+},{
+ name="test"
 }}
 
 --sprite flags
@@ -249,13 +251,13 @@ end
 
 function drawlogo()
  pal(4,5)
- spr(32,20,1,11,1)
- spr(32,19,2,11,1)
- pal(4,0)
- spr(32,21,2,11,1)
- spr(32,20,3,11,1)
- pal(4,4)
  spr(32,20,2,11,1)
+ spr(32,19,3,11,1)
+ pal(4,0)
+ spr(32,21,3,11,1)
+ spr(32,20,4,11,1)
+ pal(4,4)
+ spr(32,20,3,11,1)
  pal(0)
 end
 
@@ -272,19 +274,12 @@ function stats:new()
  ) then
   --reset incompatible data
   for l=1,#level_defs do
-   dset(l*2,1000)
-   dset(l*2+1,6000)
+   dset(l*2,0)
   end
  end
 
  dset(0,vmajor)
  dset(1,vminor)
-
---temp:xplicit clear new levels
--- dset(2,1000)
--- dset(3,6000)
--- dset(28,1000)
--- dset(29,6000)
 
  return o
 end
@@ -302,14 +297,22 @@ function stats:mark_done(
 end
 
 function stats:is_done(level)
- return dget(level*2)<1000
+ return dget(level*2)>0
 end
 
 function stats:get_stats(level)
- return {
-  total_trees=dget(level*2),
-  time_taken=dget(level*2+1)
- }
+ local trees=dget(level*2)
+ if trees>0 then
+  return {
+   total_trees=trees,
+   time_taken=dget(level*2+1)
+  }
+ else
+  return {
+   total_trees=999,
+   time_taken=5999
+  }
+ end
 end
 
 function stats:stats_str(level)
@@ -326,19 +329,20 @@ function stats:update()
 end
 
 function stats:draw()
- cls(1)
+ cls(0)
+ rectfill(16,0,111,128,1)
 
  drawlogo()
 
  print(
   "level     time   trees",
-  20,14,9
+  20,15,9
  )
 
  color(4)
 
  for n,ld in pairs(level_defs) do
-  local y=n*7+14
+  local y=n*7+15
   print(ld.name,20,y)
   if self:is_done(n) then
    local s=self:get_stats(n)
@@ -367,7 +371,7 @@ function levelmenu:new()
  })
 
  o.hbridges={}
- for b in all({0,1,4,5,6,9,12}) do
+ for b in all({0,1,4,5,6,9,12,13}) do
   o.hbridges[b]=true
  end
  o.vbridges={}
