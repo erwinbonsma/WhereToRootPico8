@@ -1453,6 +1453,16 @@ function seed:update()
   )
  end
 
+ if grid:iswater(
+  self.x,self.y
+ ) then
+  self.anim=cowrap(
+   "waterdrop",
+   waterdrop_anim,self,
+   self.player.use_sfx
+  )
+ end
+
  if (not self.moving) return
 
  local v=self.speed/frate
@@ -1464,16 +1474,6 @@ function seed:update()
   self.x+=dx
   self.y+=dy
   grid:moved(self)
-
-  if grid:iswater(
-   self.x,self.y
-  ) then
-   self.anim=cowrap(
-    "waterdrop",
-    waterdrop_anim,self,
-    self.player.use_sfx
-   )
-  end
  else
   self.moving=false
   self.growrate*=2
