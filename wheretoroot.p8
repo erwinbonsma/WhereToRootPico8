@@ -261,6 +261,23 @@ function drawlogo()
  pal(0)
 end
 
+function print_time(
+ time_taken,x,y
+)
+ local str=time_str(time_taken)
+ print(
+  "⧗"..str,x-#str*4-6,y
+ )
+end
+
+function print_trees(trees,x,y)
+ local str=""..trees
+ print(
+  str..treechar,x-#str*4-6,y
+ )
+end
+
+
 stats={}
 
 function stats:new()
@@ -281,6 +298,8 @@ function stats:new()
  dset(0,vmajor)
  dset(1,vminor)
 
+-- dset(30,0)
+
  return o
 end
 
@@ -288,12 +307,16 @@ function stats:mark_done(
  level,time_taken,total_trees
 )
  local cur=self:get_stats(level)
- dset(level*2,
-  min(cur.total_trees,
-   min(total_trees,999)))
- dset(level*2+1,
-  min(cur.time_taken,
-   min(time_taken,5999)))
+ if cur==nil then
+  cur={
+   total_trees=999,
+   time_taken=3599
+  }
+ end
+ dset(level*2,min(total_trees,
+  cur.total_trees))
+ dset(level*2+1,min(time_taken,
+  cur.time_taken))
 end
 
 function stats:is_done(level)
@@ -307,19 +330,7 @@ function stats:get_stats(level)
    total_trees=trees,
    time_taken=dget(level*2+1)
   }
- else
-  return {
-   total_trees=999,
-   time_taken=5999
-  }
  end
-end
-
-function stats:stats_str(level)
- local s=self:get_stats(level)
- return "⧗"..time_str(
-  s.time_taken
- ).." "..s.total_trees..treechar
 end
 
 function stats:update()
@@ -335,7 +346,7 @@ function stats:draw()
  drawlogo()
 
  print(
-  "level     time   trees",
+  "level      time  trees",
   20,15,9
  )
 
@@ -346,15 +357,9 @@ function stats:draw()
   print(ld.name,20,y)
   if self:is_done(n) then
    local s=self:get_stats(n)
-   local str=time_str(
-    s.time_taken
-   )
-   print(
-    "⧗"..str,76-#str*4,y
-   )
-   str=""..s.total_trees
-   print(
-    str..treechar,102-#str*4,y
+   print_time(s.time_taken,78,y)
+   print_trees(
+    s.total_trees,108,y
    )
   end
  end
@@ -375,7 +380,7 @@ function levelmenu:new()
   o.hbridges[b]=true
  end
  o.vbridges={}
- for b in all({2,3,4,6,7,8,9}) do
+ for b in all({2,3,4,6,7,8,9,11}) do
   o.vbridges[b]=true
  end
 
@@ -410,9 +415,15 @@ function levelmenu:_setpos(pos)
  self.cx=pos%4
  self.cy=flr(pos/4)
  self.lvl=levelmenu_pos[pos+1]
- self.tree=stats:is_done(
-  self.lvl
- )
+ if self.lvl>0 then
+  self.tree=stats:is_done(
+   self.lvl
+  )
+  self.goal=level_goal(self.lvl)
+ else
+  self.tree=false
+  self.goal=nil
+ end
 
  for x=1,3 do
   for y=1,3 do
@@ -554,16 +565,24 @@ function levelmenu:draw()
   return
  end
 
+ spr(
+  self.goal.sprite_idx,5,119
+ )
  local name=level_defs[
   self.lvl
  ].name
- print("level: "..name,4,120,4)
+ print(name,15,120,4)
 
- if stats:is_done(self.lvl) then
-  local s=stats:stats_str(
-   self.lvl
+ local s=stats:get_stats(
+  self.lvl
+ )
+ if s!=nil then
+  print_time(
+   s.time_taken,97,120
   )
-  print(s,185-#s*4,120,4)
+  print_trees(
+   s.total_trees,123,120
+  )
  end
 end
 -->8
@@ -997,6 +1016,10 @@ function areagoal:new(
  end
  o.winner=nil
 
+ o.sprite_idx=(
+  #areas>1 and 22 or 23
+ )
+
  return o
 end
 
@@ -1046,20 +1069,24 @@ function areagoal:unit_removed(
 end
 
 function areagoal:draw()
- local x=10
+ spr(self.sprite_idx,5,119)
+
+ if (#self.areas==1) return
+
+ local x=15
  local c=self.counts
  for p in all(self.players) do
   pal(p.pal)
   for n,a in pairs(self.areas) do
-   local sx=x+flr((n%4)/2)*5
-   local sy=2+((n+1)%2)*5
+   local sx=x+flr((n%4)/2)*4
+   local sy=119+((n+1)%2)*4
    if c[p][a]>0 then
-    spr(5,sx,sy)
+    spr(26,sx,sy)
    else
-    spr(1,sx,sy-1)
+    pset(sx+1,sy+1,6)
    end
   end
-  x+=32
+  x+=8
  end
  pal(0)
 end
@@ -1093,6 +1120,8 @@ function treegoal:new(
  end
  o.winner=nil
 
+ o.sprite_idx=24
+
  return o
 end
 
@@ -1125,20 +1154,19 @@ function treegoal:unit_removed(
 end
 
 function treegoal:draw()
- local x=10
+ spr(self.sprite_idx,5,119)
+
+ local x=13
  local c=self.counts
  for p in all(self.players) do
   pal(p.pal)
   for n=0,self.target-1 do
-   local sy=n%2*5
-   local sx=x+flr(n/2)*5
-   if self.counts[p]>n then
-    spr(5,sx,sy)
-   else
-    spr(1,sx,sy-1)
-   end
+   spr(
+    c[p]>n and 27 or 28,x,119
+   )
+   x+=2
   end
-  x+=26
+  x+=4
  end
  pal(0)
 end
@@ -1159,6 +1187,8 @@ function killgoal:new(
  end
  o.total=0
  o.winner=nil
+
+ o.sprite_idx=25
 
  return o
 end
@@ -1188,18 +1218,48 @@ function killgoal:unit_removed(
 end
 
 function killgoal:draw()
- local sy=0
- local sx=8
+ spr(self.sprite_idx,5,119)
+
+ local x=7
+ local c=self.counts
  for p in all(self.players) do
-  pal(p.pal)
-  if self.counts[p]>0 then
-   spr(5,sx,sy)
-  else
-   spr(1,sx,sy-1)
+  if x>7 then
+   pal(p.pal)
+   spr(
+    c[p]>0 and 16 or 17,x,117
+   )
   end
-  sx+=8
+  x+=8
  end
  pal(0)
+end
+
+function level_goal(
+ level,players
+)
+ local ld=level_defs[
+  level
+ ].data
+ players=players or {}
+
+ if ld.goals then
+  local areas={}
+  for args in all(ld.goals) do
+   add(areas,rectgoal(args))
+  end
+
+  return areagoal:new(
+   areas,players
+  )
+ elseif ld.weeds then
+  return killgoal:new(
+   grid,players
+  )
+ else
+  return treegoal:new(
+   grid,players,ld.target
+  )
+ end
 end
 -->8
 --animations
@@ -2268,24 +2328,9 @@ function game:load_level(level)
   add(trees,t)
  end
 
- if ld.goals then
-  local areas={}
-  for args in all(ld.goals) do
-   add(areas,rectgoal(args))
-  end
-
-  self.goal=areagoal:new(
-   areas,self.players
-  )
- elseif ld.weeds then
-  self.goal=killgoal:new(
-   grid,self.players
-  )
- else
-  self.goal=treegoal:new(
-   grid,self.players,ld.target
-  )
- end
+ self.goal=level_goal(
+  level,self.players
+ )
  grid:add_observer(self.goal)
 
  for t in all(trees) do
@@ -2381,6 +2426,7 @@ function game:draw()
 
  camera()
 
+ drawlogo()
  self.goal:draw()
  if self.msg!=nil then
   print(
@@ -2388,18 +2434,15 @@ function game:draw()
   )
  end
 
- local ts=time_str(
-  self.time_taken
+ color(self.time_hi and 11 or 4)
+ print_time(
+  self.time_taken,97,120
  )
- print(
-  "⧗"..ts,4,122,
-  self.time_hi and 11 or 4
- )
+
  local human=self.players[1]
- print(
-  human.total_trees..treechar,
-  16+4*#ts,122,
-  self.tree_hi and 11 or 4
+ color(self.tree_hi and 11 or 4)
+ print_trees(
+  human.total_trees,123,120
  )
 end
 
@@ -2419,14 +2462,14 @@ __gfx__
 00700700000600000006500000005000000555000005500006777760006666000000000000000000000000000000000000000000006665000067650000066000
 00000000000000000000000000000000000000000000000000677600000660000000000000000000000000000000000000000000000000000600006000000000
 00000000000000000000000000000000000000000000000000066000000000000000000000000000000000000000000000000000000000000000000060000006
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000007700000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000070000077770000000000000000000000000000000000000000000000000000000000000770000000000060000000
-00000000000000000000000000000000000777000067750000000000000000000000000000000000000000000000000000000000007777000600000000000060
-00000000000000000007700000077700000675000066650000000000000000000000000000000000000000000000000000000000006775000007760000000000
-00000000000600000006500000066500000060000006600000000000000000000000000000000000000000000000000000000000006665000067750000077000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600006000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060000006
+00000000000000000000000000000000000000000000000044404440404040404444440000444000666000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000007700040404040440404000400040004000400606000000000000000000000000000000000000000000000
+00000000000000000000000000000000000070000077770044404440404040400040000040444040666000006600000005000000000770000000000060000000
+00666000000000000000000000000000000777000067750000000000440404000004000040404040000000006600000005000000007777000600000000000060
+06000600000000000007700000077700000675000066650044404440404040400040000040444040000000006600000005000000006775000007760000000000
+06060600000600000006500000066500000060000006600040404040400000000400040004000400000000000000000000000000006665000067750000077000
+06000600000000000000000000000000000000000000000044404440400000004444440000444000000000000000000000000000000000000600006000000000
+00666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060000006
 44444000004440004440044444440004444444404440000444440000444440440004400004400444040000440000000000000000000000000000000011155111
 04400400040004040004040040040004004400440004000044004000400040444044400044440044044000400000000000000000000000000000000015555551
 04400040040004040004000040040004004400440004000044000400400000404440400040040044044400400000000000000000000000000000000055555555
