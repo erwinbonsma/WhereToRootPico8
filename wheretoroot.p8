@@ -2384,15 +2384,17 @@ function game:draw()
   )
  end
 
+ local ts=time_str(
+  self.time_taken
+ )
  print(
-  "⧗"..time_str(self.time_taken),
-  4,122,
+  "⧗"..ts,4,122,
   self.time_hi and 11 or 4
  )
  local human=self.players[1]
  print(
-  treechar..human.total_trees,
-  32,122,
+  human.total_trees..treechar,
+  16+4*#ts,122,
   self.tree_hi and 11 or 4
  )
 end
