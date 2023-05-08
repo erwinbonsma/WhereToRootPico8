@@ -1383,10 +1383,16 @@ function seedroot_anim(args)
   s.h+=s.vh
   yield()
  end
+
+ if t==nil then
+  --seed attempt on barren
+  seedsquash_anim({s,use_sfx})
+  return
+ end
+
  yield()
 
  if (use_sfx) sfx(15)
- local steps=s.si
  for i=0,s.si-1 do
   s.h=-i
   wait(20)
@@ -1444,16 +1450,20 @@ function seed:new(dx,dy,o)
  return o
 end
 
-function seed:can_root()
+function seed:can_root(
+ ignore_barren
+)
  return (
   self.anim==nil or
   self.anim.name=="rot"
  ) and
- not grid:isbarren(
-  self.x,self.y
- ) and
  not grid:iswater(
   self.x,self.y
+ ) and (
+  ignore_barren or
+  not grid:isbarren(
+   self.x,self.y
+  )
  )
 end
 
@@ -1474,16 +1484,26 @@ function seed:is_rooting()
  )
 end
 
-function seed:root()
- if not self:can_root() then
+function seed:root(
+ try_on_barren
+)
+ if not self:can_root(true) then
   return false
  end
 
- local t=tree:new(
-  self.x,self.y,{
-   player=self.player
-  }
+ local barren=grid:isbarren(
+  self.x,self.y
  )
+ local t=nil
+ if barren then
+  if (not try_on_barren) return
+ else
+  t=tree:new(
+   self.x,self.y,{
+    player=self.player
+   }
+  )
+ end
 
  self.anim=cowrap(
   "root",seedroot_anim,self,t,
@@ -2109,13 +2129,15 @@ function hplayer:_try_move(
 end
 
 function hplayer:_can_root_obj(
- obj
+ obj,ignore_barren
 )
  return (
   not self.cursor_moving
   and isseed(obj)
   and obj.grid==grid
-  and obj:can_root()
+  and obj:can_root(
+   ignore_barren
+  )
  )
 end
 
@@ -2152,11 +2174,16 @@ function hplayer:update()
   self:_try_move(0,1)
  end
  if btnp(❎) then
+  --allow rooting on barren.
+  --this will destroy the seed
+  --which can make way for
+  --another and discourages
+  --root spamming
   if not (
    self:_can_root_obj(
-    self.selected
+    self.selected,true
    )
-   and self.selected:root()
+   and self.selected:root(true)
   ) then
    sfx(13)
   end
