@@ -2103,9 +2103,9 @@ function hplayer:_find_next(
   end
  end
 
- local l=self:_listfor(sel)
  local nxt=self:_find_closest(
-  self.cx,self.cy,l,pred,dist
+  self.cx,self.cy,self.seeds,
+  pred,dist
  )
 
  return nxt
