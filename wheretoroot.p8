@@ -1300,19 +1300,14 @@ function title_anim(args)
 
  wait(60)
 
- for i=1,24 do
+ for i=1,124 do
   s.treeh+=0.5
-  yield()
- end
-
- for i=1,100 do
-  s.treeh+=0.5
-  s.branchl+=0.3
+  s.branchl+=0.25
   yield()
  end
 
  while s.seedr<8.5 do
-  s.seedr+=0.02
+  s.seedr+=0.04
   yield()
  end
 end
