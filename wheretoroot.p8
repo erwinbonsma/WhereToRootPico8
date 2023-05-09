@@ -2564,9 +2564,8 @@ function title:draw()
  end
  
  for i=0,31 do
-  local h=1+i/6
-  local ya=64+flr(sin(i/64)*4)
-  local yb=ya-h
+  local ya=64+sin(i/64)*4
+  local yb=62+sin(i/80)*8
   local y1=(ya*3+yb)/4
   local y2=(ya+yb*3)/4
   local x1=32+i
