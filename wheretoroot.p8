@@ -1266,6 +1266,57 @@ end
 -->8
 --animations
 
+function title_anim(args)
+ local s=args[1]
+
+ s.treeh=0
+ s.branchl=0
+ s.seedr=0
+ s.logoy=-50
+
+ local a=0.03
+ local v=0
+ while (
+  s.logoy<10 or v<0
+ ) do
+  v+=a
+  s.logoy+=v
+  if s.logoy>10 and v>0.5 then
+   v=-v*0.5
+  end
+
+  yield()
+ end
+
+ v=0
+ s.seedh=-8
+ while s.seedh<128 do
+  v+=a
+  s.seedh+=v
+
+  yield()
+ end
+ s.seedh=nil
+
+ wait(60)
+
+ for i=1,24 do
+  s.treeh+=0.5
+  yield()
+ end
+
+ for i=1,100 do
+  s.treeh+=0.5
+  s.branchl+=0.3
+  yield()
+ end
+
+ while s.seedr<8.5 do
+  s.seedr+=0.02
+  yield()
+ end
+end
+
 function seeddrop_anim(args)
  local s=args[1]
  local kills=args[2]
@@ -2489,30 +2540,23 @@ title={}
 function title:new()
  local o=setmetatable({},self)
  self.__index=self
- self.treeh=0
- self.branchl=0
- self.seedr1=0
- self.seedr2=0
+
+ o.anim=cowrap(
+  "title",title_anim,o
+ )
+
  return o
 end
 
 function title:update()
- if self.treeh<64 then
-  self.treeh+=0.5
- end
- if self.treeh>12 then
-  if self.branchl<32 then
-   self.branchl+=0.3
-  else
-   if self.seedr1<8 then
-    self.seedr1+=rnd(0.03)
-   end
-   if self.seedr2<8 then
-    self.seedr2+=rnd(0.03)
-   end
+ if self.anim!=nil then
+  if coinvoke(self.anim) then
+   self.anim=nil
   end
  end
+
  if btnp(❎) or btnp(🅾️) then
+  printh("btnp")
   scene=levelmenu
  end
 end
@@ -2535,6 +2579,30 @@ function title:_drawlogo(
    end
   end
  end
+end
+
+function title:_drawtrunk(y0)
+ for y=y0,127 do
+  local w=ceil((y-y0)/20)+2
+  local xa=64-w
+  local xb=64+w
+  local x1=(xa*3+xb*2)/5
+  local x2=(xa+xb*4)/5
+  line(x1,y,x2,y,5)
+  line(xa,y,flr(x1),y,4)
+  line(ceil(x2),y,xb,y,15)
+ end
+end
+
+function title:_drawseed(x,y,r)
+ if (r<2) return
+
+ pal(player_pals[1],0)
+ pal(1,6,0)
+
+ spr(r+215,x-3,y+2)
+
+ pal(0)
 end
 
 function title:_drawbranch(
@@ -2567,23 +2635,12 @@ function title:_drawbranch(
  spr(204,x1-8,ya-6,2,1)
  spr(204,x2-8,ya-6,2,1)
 
- if bl>32 then
-  pal(player_pals[1],0)
-  pal(1,6,0)
-
-  if self.seedr1>=2 then
-   spr(
-    self.seedr1+215,x1-3,ya+2
-   )
-  end
-  if self.seedr2>=2 then
-   spr(
-    self.seedr2+215,x2-3,ya+2
-   )
-  end
-
-  pal(0)
- end
+ self:_drawseed(
+  x1,ya+1,self.seedr
+ )
+ self:_drawseed(
+  x2,ya+1,self.seedr-0.5
+ )
 end
 
 function title:draw()
@@ -2598,8 +2655,9 @@ function title:draw()
 
  cls(1)
 
+ local y0=self.logoy
  rectfill(
-  16,6,111,49,15
+  16,y0-4,111,y0+39,15
  )
  for f in all({
   {-1,0,5},{0,-1,5},
@@ -2610,32 +2668,31 @@ function title:draw()
   color(f[3])
 
   self:_drawlogo(
-   20+dx,10+dy,0,16,43,7
+   20+dx,y0+dy,0,16,43,7
   )
   self:_drawlogo(
-   22+dx,30+dy,46,16,42,7
+   22+dx,y0+dy+20,46,16,42,7
   )
  end
 
- --tree trunk
- local y0=127-self.treeh
- for y=y0,127 do
-  local w=ceil((y-y0)/20)+2
-  local xa=64-w
-  local xb=64+w
-  local x1=(xa*3+xb*2)/5
-  local x2=(xa+xb*4)/5
-  line(x1,y,x2,y,5)
-  line(xa,y,flr(x1),y,4)
-  line(ceil(x2),y,xb,y,15)
+ if self.seedh then
+  self:_drawseed(
+   64,self.seedh,8
+  )
+  spr(204,56,self.seedh-7,2,1)
  end
 
- if self.branchl>0 then
-  self:_drawbranch(
-   y0,self.branchl
-  )
- else
-  spr(204,56,y0-6,2,1)
+ if self.treeh>0 then
+  local y0=127-self.treeh
+  self:_drawtrunk(y0)
+
+  if self.branchl>0 then
+   self:_drawbranch(
+    y0,self.branchl
+   )
+  else
+   spr(204,56,y0-6,2,1)
+  end
  end
 
  for i=0,15 do
