@@ -12,6 +12,7 @@ Core colors
 |  3  | dark-green      | G-dark               |
 |  4  | brown           | Tree-light           |
 |  5  | => darker-gray  | Tree-dark, walls     |
+|  6  | => blue         | Water/sky            |
 |  8  | => dark-red     | R-medium             |
 | 10  | => medium-green | G-medium             |
 | 11  | green           | G-light              |
@@ -22,6 +23,5 @@ Core colors
 
 Available
 ---------
-6
 7
 9
