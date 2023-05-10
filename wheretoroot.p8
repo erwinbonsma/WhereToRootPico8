@@ -6,7 +6,7 @@ __lua__
 
 --cartdata
 vmajor=0
-vminor=1
+vminor=2
 
 frate=60
 seed_r=2.2
@@ -21,6 +21,7 @@ seeddrop_h=6
 cellsz=8
 roots_r=16
 default_maxgrowrate=0.1/frate
+slowgrowrate=0.05/frate
 maxgrowrate=default_maxgrowrate
 
 seedspeed=6
@@ -46,10 +47,10 @@ player_pals={
 --maps level-menu positions to
 --levels
 levelmenu_pos={
- 1,2,3,8,
- 5,7,4,6,
- 9,13,10,11,
- 0,15,12,14,
+ 1, 2, 3,11,
+ 7, 6, 4, 5,
+ 8,10, 9,12,
+ 0,13,14,15,
 }
 
 level_defs={{
@@ -81,18 +82,11 @@ level_defs={{
   plyrs={{32,32}}
  }
 },{
- name="plane",
+ name="bridges",
  data={
-  mapdef={0,0,15,15},
-  goals={{3,3,3,3},{9,9,3,3},{9,3,3,3},{3,9,3,3}},
-  plyrs={{36,36},{84,36},{36,84},{84,84}}
- }
-},{
- name="spiral",
- data={
-  mapdef={59,0,16,16},
-  goals={{6,6,4,4}},
-  plyrs={{24,24}}
+  mapdef={90,0,15,15},
+  goals={{2,2,3,3},{10,10,3,3},{10,2,3,3},{2,10,3,3}},
+  plyrs={{28,28}}
  }
 },{
  name="duel",
@@ -102,11 +96,11 @@ level_defs={{
   plyrs={{68,22},{68,116}}
  }
 },{
- name="bridges",
+ name="plane",
  data={
-  mapdef={90,0,15,15},
-  goals={{2,2,3,3},{10,10,3,3},{10,2,3,3},{2,10,3,3}},
-  plyrs={{28,28}}
+  mapdef={0,0,15,15},
+  goals={{3,3,3,3},{9,9,3,3},{9,3,3,3},{3,9,3,3}},
+  plyrs={{36,36},{84,36},{36,84},{84,84}}
  }
 },{
  name="islands",
@@ -114,53 +108,37 @@ level_defs={{
   mapdef={0,15,15,15},
   goals={{1,1,5,5},{9,9,5,5},{9,1,5,5},{1,9,5,5}},
   plyrs={{28,28},{92,92},{92,28},{28,92}},
-  params={
-   maxgrowrate=
-    default_maxgrowrate*0.5
-  }
+  maxgrowrate=slowgrowrate
  }
 },{
- name="checker",
+ name="check 1",
  data={
   mapdef={14,15,16,16},
   target=8,
   plyrs={{64,64}},
-  params={
-   maxgrowrate=
-    default_maxgrowrate*0.5
-  }
+  maxgrowrate=slowgrowrate
  }
 },{
- name="holey",
- data={
-  mapdef={29,15,16,16},
-  plyrs={{20,20}},
-  goals={{12,12,3,3}}
- }
-},{
- name="battle",
- data={
-  mapdef={45,15,15,15},
-  plyrs={{20,20},{100,20},{20,100},{60,60}},
-  weeds=true
- }
-},{
- name="check12",
+ name="check 2",
  data={
   mapdef={75,17,16,16},
   target=8,
   plyrs={{64,64}},
-  params={
-   maxgrowrate=
-    default_maxgrowrate*0.5
-  }
+  maxgrowrate=slowgrowrate
  }
 },{
- name="siege",
+ name="spiral",
  data={
-  mapdef={90,15,16,16},
-  plyrs={{24,64},{64,32},{64,96},{104,64}},
-  weeds=true
+  mapdef={59,0,16,16},
+  goals={{6,6,4,4}},
+  plyrs={{24,24}}
+ }
+},{
+ name="holes",
+ data={
+  mapdef={29,15,16,16},
+  plyrs={{20,20}},
+  goals={{12,12,3,3}}
  }
 },{
  name="quest",
@@ -170,6 +148,20 @@ level_defs={{
   goals={{11,11,3,3}},
   weeds=true
  }
+},{
+ name="battle",
+ data={
+  mapdef={45,15,15,15},
+  plyrs={{20,20},{100,20},{20,100},{60,60}},
+  weeds=true
+ }
+},{
+ name="siege",
+ data={
+  mapdef={90,15,16,16},
+  plyrs={{24,64},{64,32},{64,96},{104,64}},
+  weeds=true
+ }
 }}
 
 --sprite flags
@@ -177,6 +169,12 @@ flag_goal=0
 flag_wall=1
 flag_water=2
 flag_barren=3
+
+--goal types
+goal_areas=0
+goal_finish=1
+goal_count=2
+goal_kill=3
 
 function vlen(dx,dy)
  if abs(dx)+abs(dy)>100 then
@@ -349,27 +347,32 @@ end
 
 function stats:draw()
  cls(0)
- rectfill(16,0,111,128,1)
+ rectfill(12,0,115,128,1)
 
  drawlogo()
 
  print(
   "level      time  trees",
-  20,15,9
+  24,15,9
  )
 
  color(4)
 
  for n,ld in pairs(level_defs) do
   local y=n*7+15
-  print(ld.name,20,y)
+  print(ld.name,24,y)
   if self:is_done(n) then
    local s=self:get_stats(n)
-   print_time(s.time_taken,78,y)
+   print_time(
+    s.time_taken,82,y
+   )
    print_trees(
-    s.total_trees,108,y
+    s.total_trees,112,y
    )
   end
+  spr(
+   43+level_goal_type(n),16,y
+  )
  end
 end
 
@@ -1240,6 +1243,24 @@ function killgoal:draw()
   x+=8
  end
  pal(0)
+end
+
+function level_goal_type(level)
+ local ld=level_defs[
+  level
+ ].data
+ if ld.goals then
+  if #ld.goals>1 then
+   return goal_areas
+  else
+   return goal_finish
+  end
+ elseif ld.weeds then
+  return goal_kill
+ else
+  assert(ld.target>0)
+  return goal_count
+ end
 end
 
 function level_goal(
@@ -2421,9 +2442,8 @@ function game:load_level(level)
   grid:add(t)
  end
 
- local params=ld.params or {}
  maxgrowrate=(
-  params.maxgrowrate or
+  ld.maxgrowrate or
   default_maxgrowrate
  )
 end
@@ -2712,11 +2732,11 @@ __gfx__
 06060600000600000006500000066500000060000006600040404040400000000400040004000400000000000000000000000000006665000067750000077000
 06000600000000000000000000000000000000000000000044404440400000004444440000444000000000000000000000000000000000000600006000000000
 00666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060000006
-fffff40008fff408fff40fffffff000ffffffff8fff4002fffff4000fffff0ff408ff0008ff40fff0f4000ff0000000000000000000000000000000011155111
-2ff02f400f102f0f102f0f00f00f000f00ff00ff102f0002ff02f400f000f0fffcfff000ffff02f10ff400f10000000000000000000000000000000015555551
-0ff002f00f000f0f000f0000f40f000f00ff00ff000f0000ff002f00f00000f2fff1f000f12f00f00fff40f00000000000000000000000000000000055555555
-0ff008f00f000f0f000f0000ff00000000ff000f000f0000ff008f00ffff00f02f10f000f00f00f00f2ff4f00000000000000000000000000000000055555555
-0fffff500f500f0f400f0000ff00000000ff000f500f0000fffff500ff0008f00f00f400ffff40f00f42fff00000000000000000000000000000000015555551
+fffff40008fff408fff40fffffff000ffffffff8fff4002fffff4000fffff0ff408ff0008ff40fff0f4000ff4404400040404000444440000444000011155111
+2ff02f400f102f0f102f0f00f00f000f00ff00ff102f0002ff02f400f000f0fffcfff000ffff02f10ff400f14404400044040000040040004000400015555551
+0ff002f00f000f0f000f0000f40f000f00ff00ff000f0000ff002f00f00000f2fff1f000f12f00f00fff40f00000000040404000004000004040400055555555
+0ff008f00f000f0f000f0000ff00000000ff000f000f0000ff008f00ffff00f02f10f000f00f00f00f2ff4f04404400040000000040040004000400055555555
+0fffff500f500f0f400f0000ff00000000ff000f500f0000fffff500ff0008f00f00f400ffff40f00f42fff04404400040000000444440000444000015555551
 8ff002f00ff00f0ff00f0008ff00000000ff400ff00f0000ff000f40ff000ff08f00ff08f12ff0f40ff02ff40000000000000000000000000000000001155110
 fff408f40ff48f0ff48f008fff40000008fff40ff48f0008ff408ff4ff408ff0ff40ff4ff00ff8ff4ff002ff0000000000000000000000000000000000000000
 ffff0ffffffff9fffffffffffff400008fffff4bfff1008ffff0fffffffffff0fff0fffff00ffffffff508ff0000000000000000000000000000000010000001
