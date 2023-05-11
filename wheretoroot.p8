@@ -55,113 +55,83 @@ levelmenu_pos={
 
 level_defs={{
  name="intro",
- data={
-  mapdef={0,0,15,15},
-  goals={{3,3,3,3},{9,9,3,3},{9,3,3,3},{3,9,3,3}},
-  plyrs={{36,36}}
- }
+ mapdef={0,0,15,15},
+ goals={{3,3,3,3},{9,9,3,3},{9,3,3,3},{3,9,3,3}},
+ plyrs={{36,36}}
 },{
  name="walls",
- data={
-  mapdef={15,0,15,15},
-  goals={{3,3,4,4},{8,8,4,4},{8,3,4,4},{3,8,4,4}},
-  plyrs={{40,40}}
- }
+ mapdef={15,0,15,15},
+ goals={{3,3,4,4},{8,8,4,4},{8,3,4,4},{3,8,4,4}},
+ plyrs={{40,40}}
 },{
  name="tiles",
- data={
-  mapdef={30,0,15,15},
-  goals={{3,3,3,3},{9,9,3,3},{9,3,3,3},{3,9,3,3}},
-  plyrs={{36,36}}
- }
+ mapdef={30,0,15,15},
+ goals={{3,3,3,3},{9,9,3,3},{9,3,3,3},{3,9,3,3}},
+ plyrs={{36,36}}
 },{
  name="water",
- data={
-  mapdef={45,0,15,15},
-  goals={{2,2,4,4},{9,9,4,4},{9,2,4,4},{2,9,4,4}},
-  plyrs={{32,32}}
- }
+ mapdef={45,0,15,15},
+ goals={{2,2,4,4},{9,9,4,4},{9,2,4,4},{2,9,4,4}},
+ plyrs={{32,32}}
 },{
  name="bridges",
- data={
-  mapdef={90,0,15,15},
-  goals={{2,2,3,3},{10,10,3,3},{10,2,3,3},{2,10,3,3}},
-  plyrs={{28,28}}
- }
+ mapdef={90,0,15,15},
+ goals={{2,2,3,3},{10,10,3,3},{10,2,3,3},{2,10,3,3}},
+ plyrs={{28,28}}
 },{
  name="duel",
- data={
-  mapdef={74,0,17,17},
-  goals={{2,3,3,3},{12,11,3,3},{12,3,3,3},{2,11,3,3}},
-  plyrs={{68,22},{68,116}}
- }
+ mapdef={74,0,17,17},
+ goals={{2,3,3,3},{12,11,3,3},{12,3,3,3},{2,11,3,3}},
+ plyrs={{68,22},{68,116}}
 },{
  name="square",
- data={
-  mapdef={0,0,15,15},
-  goals={{3,3,3,3},{9,9,3,3},{9,3,3,3},{3,9,3,3}},
-  plyrs={{36,36},{84,36},{36,84},{84,84}}
- }
+ mapdef={0,0,15,15},
+ goals={{3,3,3,3},{9,9,3,3},{9,3,3,3},{3,9,3,3}},
+ plyrs={{36,36},{84,36},{36,84},{84,84}}
 },{
  name="islands",
- data={
-  mapdef={0,15,15,15},
-  goals={{1,1,5,5},{9,9,5,5},{9,1,5,5},{1,9,5,5}},
-  plyrs={{28,28},{92,92},{92,28},{28,92}},
-  maxgrowrate=slowgrowrate
- }
+ mapdef={0,15,15,15},
+ goals={{1,1,5,5},{9,9,5,5},{9,1,5,5},{1,9,5,5}},
+ plyrs={{28,28},{92,92},{92,28},{28,92}},
+ maxgrowrate=slowgrowrate
 },{
  name="check 1",
- data={
-  mapdef={14,15,16,16},
-  target=8,
-  plyrs={{64,64}},
-  maxgrowrate=slowgrowrate
- }
+ mapdef={14,15,16,16},
+ target=8,
+ plyrs={{64,64}},
+ maxgrowrate=slowgrowrate
 },{
  name="check 2",
- data={
-  mapdef={75,17,16,16},
-  target=8,
-  plyrs={{64,64}},
-  maxgrowrate=slowgrowrate
- }
+ mapdef={75,17,16,16},
+ target=8,
+ plyrs={{64,64}},
+ maxgrowrate=slowgrowrate
 },{
  name="spiral",
- data={
-  mapdef={59,0,16,16},
-  goals={{6,6,4,4}},
-  plyrs={{24,24}}
- }
+ mapdef={59,0,16,16},
+ goals={{6,6,4,4}},
+ plyrs={{24,24}}
 },{
  name="holes",
- data={
-  mapdef={29,15,16,16},
-  plyrs={{20,20}},
-  goals={{12,12,3,3}}
- }
+ mapdef={29,15,16,16},
+ plyrs={{20,20}},
+ goals={{12,12,3,3}}
 },{
  name="quest",
- data={
-  mapdef={60,16,15,15},
-  plyrs={{20,20},{100,20},{20,100},{60,60}},
-  goals={{11,11,3,3}},
-  weeds=true
- }
+ mapdef={60,16,15,15},
+ plyrs={{20,20},{100,20},{20,100},{60,60}},
+ goals={{11,11,3,3}},
+ weeds=true
 },{
  name="battle",
- data={
-  mapdef={45,15,15,15},
-  plyrs={{20,20},{100,20},{20,100},{60,60}},
-  weeds=true
- }
+ mapdef={45,15,15,15},
+ plyrs={{20,20},{100,20},{20,100},{60,60}},
+ weeds=true
 },{
  name="siege",
- data={
-  mapdef={90,15,16,16},
-  plyrs={{24,64},{64,32},{64,96},{104,64}},
-  weeds=true
- }
+ mapdef={90,15,16,16},
+ plyrs={{24,64},{64,32},{64,96},{104,64}},
+ weeds=true
 }}
 
 --sprite flags
@@ -201,6 +171,20 @@ end
 
 function pred_true()
  return true
+end
+
+function printbig(s,x0,y0,c)
+ print(s,x0,y0,c)
+ for y=4,0,-1 do
+  local yd=y0+y*2
+  for x=#s*4,0,-1 do
+   local xd=x0+x*2
+   rectfill(
+    xd,yd,xd+1,yd+1,
+    pget(x0+x,y0+y)
+   )
+  end
+ end
 end
 
 --wrap coroutine with a name to
@@ -518,7 +502,6 @@ function levelmenu:update()
  if btnp(❎) then
   if self.lvl>0 then
    scene=game:new(self.lvl)
-   sfx(3)
   else
    scene=stats
   end
@@ -1247,9 +1230,7 @@ function killgoal:draw()
 end
 
 function level_goal_type(level)
- local ld=level_defs[
-  level
- ].data
+ local ld=level_defs[level]
  if ld.goals then
   if #ld.goals>1 then
    return goal_areas
@@ -1267,9 +1248,7 @@ end
 function level_goal(
  level,players
 )
- local ld=level_defs[
-  level
- ].data
+ local ld=level_defs[level]
  players=players or {}
 
  if ld.goals then
@@ -1294,44 +1273,54 @@ end
 -->8
 --animations
 
+function drop(obj,ymax,bounce)
+ local a=0.03
+ local v=0
+
+ while true do
+  v+=a
+  obj.y+=v
+  if obj.y>ymax then
+   obj.y=ymax
+   if v>0.5 and bounce then
+    v=-v*0.5
+    sfx(16)
+   else
+    return
+   end
+  end
+
+  yield()
+ end
+end
+
 function title_anim(args)
  local s=args[1]
 
  s.treeh=0
  s.branchl=0
  s.seedr=0
- s.logoy=-50
+ s.logo={y=-50}
 
- local a=0.03
- local v=0
- while (
-  s.logoy<10 or v<0
- ) do
-  v+=a
-  s.logoy+=v
-  if s.logoy>10 and v>0.5 then
-   v=-v*0.5
-   sfx(16)
-  end
+ drop(s.logo,10,true)
 
-  yield()
- end
- sfx(16)
  wait(5)
  sfx(15)
 
- v=0
- s.seedh=-8
- while s.seedh<128 do
-  v+=a
-  s.seedh+=v
+ local seed={y=-8,r=8}
+ s.seed=seed
+ drop(seed,120,true)
 
-  yield()
+ while seed.r>1 do
+  wait(10)
+  seed.r-=1
+  seed.y+=1
  end
- s.seedh=nil
- sfx(10)
+
+-- sfx(10)
 
  wait(60)
+ s.seed=nil
 
  sfx(17)
  for i=1,124 do
@@ -1505,6 +1494,17 @@ function gameend_anim()
  wait(180)
 
  scene=levelmenu
+end
+
+function gamestart_anim(args)
+ local s=args[1]
+
+ drop(s.dialog,54,true)
+
+ wait(120)
+ sfx(3)
+
+ drop(s.dialog,128)
 end
 -->8
 --seed
@@ -2396,9 +2396,7 @@ function game:new(level)
 end
 
 function game:load_level(level)
- local ld=level_defs[
-  level
- ].data
+ local ld=level_defs[level]
  self.level=level
 
  grid=cellgrid:new({
@@ -2454,6 +2452,27 @@ function game:load_level(level)
   ld.maxgrowrate or
   default_maxgrowrate
  )
+
+ self.anim=cowrap(
+  "gamestart",gamestart_anim,
+  self
+ )
+ self.dialog={y=-32}
+ local si=level_goal_type(
+  level
+ )
+ local name=ld.name
+ local hw=#name*4+12
+ self.anim.draw=function ()
+  local y=self.dialog.y
+  rectfill(63-hw,y,64+hw,y+20,1)
+
+  printbig(name,84-hw,y+5,4)
+  sspr(
+   48+8*si,8,8,8,
+   66-hw,y+3,16,16
+  )
+ end
 end
 
 function game:update()
@@ -2476,8 +2495,9 @@ function game:update()
  local winner=self.goal.winner
  self.time_taken=time()-self.start
 
+ local msg=nil
  if self.time_taken<0 then
-  self.msg="timed out"
+  msg="timed out"
  elseif winner!=nil then
   if winner==human then
    stats:mark_done(
@@ -2494,22 +2514,25 @@ function game:update()
    self.tree_hi=(
     s.total_trees==human.total_trees
    )
-   self.msg="you did it!"
+   msg="you did it!"
    end_sfx=4
   else
-   self.msg="beaten by bots"
+   msg="beaten by bots"
   end
  elseif (
   human.selected==nil
  ) then
-  self.msg="game over"
+  msg="game over"
  end
 
- if self.msg!=nil then
+ if msg!=nil then
   sfx(end_sfx)
   self.anim=cowrap(
    "gameend",gameend_anim
   )
+  self.anim.draw=function ()
+   print(msg,64-#msg*2,63,7)
+  end
  end
 end
 
@@ -2532,19 +2555,17 @@ function game:draw()
 
 -- self.goal:draw_debug()
 
- for p in all(self.players) do
-  p:draw()
+ if self.anim==nil then
+  --todo: only draw human?
+  for p in all(self.players) do
+   p:draw()
+  end
  end
 
  camera()
 
  drawlogo()
  self.goal:draw()
- if self.msg!=nil then
-  print(
-   self.msg,64-#self.msg*2,63,7
-  )
- end
 
  color(self.time_hi and 11 or 4)
  print_time(
@@ -2556,6 +2577,10 @@ function game:draw()
  print_trees(
   human.total_trees,123,120
  )
+
+ if self.anim!=nil then
+  self.anim.draw()
+ end
 end
 
 function _draw()
@@ -2679,7 +2704,7 @@ end
 function title:draw()
  cls(6)
 
- local y0=self.logoy
+ local y0=self.logo.y
  rectfill(
   16,y0-4,111,y0+39,1
  )
@@ -2699,11 +2724,11 @@ function title:draw()
   )
  end
 
- if self.seedh then
+ if self.seed then
   self:_drawseed(
-   64,self.seedh,8
+   64,self.seed.y,self.seed.r
   )
-  spr(204,56,self.seedh-7,2,1)
+  spr(204,56,self.seed.y-7,2,1)
  end
 
  if self.treeh>0 then
