@@ -496,8 +496,9 @@ function levelmenu:_try_move(
   max(self.pos,pnew)
  ) then
   self:_setpos(pnew)
+  sfx(12)
  else
-  sfx(7)
+  sfx(13)
  end
 end
 
