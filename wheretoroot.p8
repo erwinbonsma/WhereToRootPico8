@@ -96,7 +96,7 @@ level_defs={{
   plyrs={{68,22},{68,116}}
  }
 },{
- name="plane",
+ name="square",
  data={
   mapdef={0,0,15,15},
   goals={{3,3,3,3},{9,9,3,3},{9,3,3,3},{3,9,3,3}},
