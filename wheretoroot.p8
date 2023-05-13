@@ -2228,28 +2228,18 @@ function hplayer:update_cursor()
  end
 end
 
+_buttons={⬆️,➡️,⬇️,⬅️}
+_dx={0,1,0,-1}
+_dy={-1,0,1,0}
 function hplayer:update()
- local search_all=btn(❎)
- if btnp(⬅️) then
-  self:_try_move(
-   -1,0,search_all
-  )
+ for i,b in pairs(_buttons) do
+  if btnp(b) then
+   self:_try_move(
+    _dx[i],_dy[i],btn(❎)
+   )
+  end
  end
- if btnp(➡️) then
-  self:_try_move(
-   1,0,search_all
-  )
- end
- if btnp(⬆️) then
-  self:_try_move(
-   0,-1,search_all
-  )
- end
- if btnp(⬇️) then
-  self:_try_move(
-   0,1,search_all
-  )
- end
+
  if btnp(🅾️) then
   --allow rooting on barren.
   --this will destroy the seed
