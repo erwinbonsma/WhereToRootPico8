@@ -237,6 +237,10 @@ function extend(clz,baseclz)
  end
 end
 
+function actionkeyp()
+ return btnp(❎) or btnp(🅾️)
+end
+
 function drawlogo()
  palt(0xfffe)
  pal(15,5)
@@ -288,8 +292,6 @@ function stats:new()
  dset(0,vmajor)
  dset(1,vminor)
 
--- dset(30,0)
-
  return o
 end
 
@@ -324,7 +326,7 @@ function stats:get_stats(level)
 end
 
 function stats:update()
- if btnp(❎) then
+ if actionkeyp() then
   scene=levelmenu
  end
 end
@@ -499,7 +501,7 @@ function levelmenu:update()
  if btnp(⬇️) and self.cy<4 then
   self:_try_move(4)
  end
- if btnp(❎) then
+ if actionkeyp() then
   if self.lvl>0 then
    scene=game:new(self.lvl)
   else
@@ -2602,7 +2604,7 @@ function title:update()
  end
 
  if (
-  btnp(❎) or btnp(🅾️)
+  actionkeyp()
   or self.anim==nil
  ) then
   scene=levelmenu
