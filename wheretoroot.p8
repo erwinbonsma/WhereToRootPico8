@@ -1086,18 +1086,6 @@ function areagoal:draw()
  pal(0)
 end
 
-function areagoal:draw_debug()
- for x=0,15 do
-  for y=0,19 do
-   for a in all(self.areas) do
-    if a(x,y) then
-     rect(x*8,y*6,x*8+7,y*6+5,7)
-    end
-   end
-  end
- end
-end
-
 treegoal={}
 function treegoal:new(
  grid,players,target
@@ -1316,8 +1304,6 @@ function title_anim(args)
   seed.r-=1
   seed.y+=1
  end
-
--- sfx(10)
 
  wait(60)
  s.seed=nil
@@ -2025,9 +2011,6 @@ function player:unit_removed(
  return true
 end
 
-function player:draw()
-end
-
 --human player
 hplayer={}
 extend(hplayer,player)
@@ -2107,7 +2090,7 @@ end
 --      objects to consider
 --dist: distance function
 function hplayer:_find_closest(
- x,y,l_ini,pred,dist
+ x,y,l_ini,pred,dist,search_all
 )
  local dmin=1000
  local closest=nil
@@ -2138,7 +2121,9 @@ function hplayer:_find_closest(
  --expand the scope downwards
  --until something is found
  l=self._down[l_ini]
- while closest==nil and l!=nil do
+ while l!=nil and (
+  closest==nil or search_all
+ ) do
   search(l)
   l=self._down[l]
  end
@@ -2147,7 +2132,7 @@ function hplayer:_find_closest(
 end
 
 function hplayer:_find_next(
- dx,dy
+ dx,dy,search_all
 )
  local sel=self.selected
 
@@ -2188,7 +2173,7 @@ function hplayer:_find_next(
 
  local nxt=self:_find_closest(
   self.cx,self.cy,self.seeds,
-  pred,dist
+  pred,dist,search_all
  )
 
  return nxt
@@ -2196,10 +2181,10 @@ end
 
 --try to move the cursor
 function hplayer:_try_move(
- dx,dy
+ dx,dy,search_all
 )
  local nxt=self:_find_next(
-  dx,dy
+  dx,dy,search_all
  )
 
  if nxt!=nil then
@@ -2244,19 +2229,28 @@ function hplayer:update_cursor()
 end
 
 function hplayer:update()
+ local search_all=btn(❎)
  if btnp(⬅️) then
-  self:_try_move(-1,0)
+  self:_try_move(
+   -1,0,search_all
+  )
  end
  if btnp(➡️) then
-  self:_try_move(1,0)
+  self:_try_move(
+   1,0,search_all
+  )
  end
  if btnp(⬆️) then
-  self:_try_move(0,-1)
+  self:_try_move(
+   0,-1,search_all
+  )
  end
  if btnp(⬇️) then
-  self:_try_move(0,1)
+  self:_try_move(
+   0,1,search_all
+  )
  end
- if btnp(❎) then
+ if btnp(🅾️) then
   --allow rooting on barren.
   --this will destroy the seed
   --which can make way for
@@ -2553,13 +2547,8 @@ function game:draw()
  --draw seeds on top of trees
  hgrid:draw_units(nil)
 
--- self.goal:draw_debug()
-
  if self.anim==nil then
-  --todo: only draw human?
-  for p in all(self.players) do
-   p:draw()
-  end
+  self.players[1]:draw()
  end
 
  camera()
