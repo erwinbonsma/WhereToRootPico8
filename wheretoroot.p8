@@ -1735,7 +1735,6 @@ function tree:new(x,y,o)
 
  o.x=x
  o.y=y
- o.h=0
  o.r=tree_r
  o.maxseeds=
   o.player.treemaxseeds or 3
@@ -1871,6 +1870,12 @@ function tree:fits()
  return fits
 end
 
+function tree:h()
+ return flr(
+  min(self.age,0.25)*4*tree_h
+ )
+end
+
 function tree:update()
  if self.destroy then
   return true
@@ -1882,9 +1887,6 @@ function tree:update()
   self.rate_refresh+=0.1
  end
  self.age+=self.growrate
- self.h=flr(
-  min(self.age,0.25)*4*tree_h
- )
 
  if (self.age<0.7) return
 
@@ -1919,7 +1921,7 @@ tree_sprites={
 
 --draws the trunk
 function tree:draw()
- local h=self.h
+ local h=self:h()
  local x=self.x
  local y=flr(self.y*yscale)
  line(x-1,y,x-1,y-h,4)
@@ -2278,15 +2280,16 @@ function hplayer:draw()
  if (sel==nil) return
 
  pal(6,9)
- local y=flr(
-  self.cy*yscale
- )-sel.h
- if (isseed(sel)) y-=3
+ local ymin=(
+  istree(sel) and sel:h()+1
+  or sel.h+sel.si
+ )
+
  spr(
   self:_can_root_obj(sel)
    and 6 or 7,
   self.cx-4,
-  y-9
+  flr(self.cy*yscale)-ymin-9
  )
  pal(0)
 end
