@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
--- where to root? v0.4
+-- root to remain v1.0
 -- (c) 2023  eriban
 
 --cartdata
