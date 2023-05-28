@@ -729,8 +729,7 @@ function cellgrid:_maphit(
  if (vx==0 and vy==0) return true
 
  local cz=cellsz
- local mx=x%cz
- local my=y%cz
+ local mx,my=x%cz,y%cz
  --dx/dy is distance along axis
  --to cell in dir specified by
  --vx/vy
@@ -978,10 +977,9 @@ end
 --if a grid cell coordinate is
 --inside a given rectangle
 function rectgoal(args)
- local x0=args[1]
- local y0=args[2]
- local w=args[3]
- local h=args[4]
+ local x0,y0=args[1],args[2]
+ local w,h=args[3],args[4]
+
  return function(x,y)
   return (
    x>=x0 and x<x0+w and
@@ -1024,7 +1022,7 @@ function areagoal:_is_done(
  counts
 )
  for area in all(self.areas) do
-  if (counts[area]==0) return false
+  if (counts[area]==0) return
  end
  return true
 end
@@ -1069,9 +1067,9 @@ end
 function areagoal:unit_removed(
  unit
 )
- local c=self.counts
  if unit.area!=nil then
-  c[unit.player][unit.area]-=1
+  self.counts[
+   unit.player][unit.area]-=1
   unit.area=nil
  end
 end
@@ -1082,13 +1080,12 @@ function areagoal:draw()
  if (#self.areas==1) return
 
  local x=15
- local c=self.counts
  for p in all(self.players) do
   pal(p.pal)
   for n,a in pairs(self.areas) do
    local sx=x+flr((n%4)/2)*4
    local sy=119+((n+1)%2)*4
-   if c[p][a]>0 then
+   if self.counts[p][a]>0 then
     spr(26,sx,sy)
    else
     pset(sx+1,sy+1,6)
@@ -1192,8 +1189,7 @@ end
 function killgoal:unit_added(
  unit
 )
- local plyr=unit.player
- self.counts[plyr]+=1
+ self.counts[unit.player]+=1
  self.total+=1
 end
 
@@ -1442,8 +1438,7 @@ function waterdrop_anim(args)
 end
 
 function seedroot_anim(args)
- local s=args[1]
- local t=args[2]
+ local s,t=args[1],args[2]
  local use_sfx=args[3]
 
  if (use_sfx) sfx(11)
@@ -1634,8 +1629,7 @@ function seed:update()
  if (not self.moving) return
 
  local v=self.speed/frate
- local dx=self.dx*v
- local dy=self.dy*v
+ local dx,dy=self.dx*v,self.dy*v
  if grid:fits(
   self.x+dx,self.y+dy,self.r,self
  ) then
@@ -1684,8 +1678,7 @@ function create_angles(n,dmin)
 
  while #angles<n-1 do
   --find range of options
-  local r=0
-  local ap=0
+  local r,ap=0,0
   for a in all(angles) do
    r+=max(0,a-ap-dmin*2)
    ap=a
@@ -1698,9 +1691,7 @@ function create_angles(n,dmin)
   end
 
   local v=rnd(r)
-
-  local insertpos
-  local ap=0
+  local ap,insertpos=0
   for i,a in pairs(angles) do
    local w=max(0,a-ap-dmin*2)
    if v<w then
@@ -1877,9 +1868,7 @@ function tree:h()
 end
 
 function tree:update()
- if self.destroy then
-  return true
- end
+ if (self.destroy) return true
  if (self.skip_update) return
 
  if self.age>=self.rate_refresh then
@@ -1995,9 +1984,7 @@ function player:_listfor(obj)
 end
 
 function player:unit_added(obj)
- if obj.player!=self then
-  return false
- end
+ if (obj.player!=self) return
 
  local l=self:_listfor(obj)
 
@@ -2010,9 +1997,7 @@ end
 function player:unit_removed(
  obj
 )
- if obj.player!=self then
-  return false
- end
+ if (obj.player!=self) return
 
  local l=self:_listfor(obj)
  assert(l[obj._pi]==obj)
@@ -2331,8 +2316,6 @@ function cplayer:try_root(obj)
   self.root_cooldown=60
   return true
  end
-
- return false
 end
 
 function cplayer:update()
@@ -2495,7 +2478,7 @@ function game:update()
  local winner=self.goal.winner
  self.time_taken=time()-self.start
 
- local msg=nil
+ local msg
  if self.time_taken<0 then
   msg="timed out"
  elseif winner!=nil then
@@ -2553,8 +2536,9 @@ function game:draw()
  --draw seeds on top of trees
  hgrid:draw_units(nil)
 
+ local human=self.players[1]
  if self.anim==nil then
-  self.players[1]:draw()
+  human:draw()
  end
 
  camera()
@@ -2567,7 +2551,6 @@ function game:draw()
   self.time_taken,97,120
  )
 
- local human=self.players[1]
  color(self.tree_hi and 11 or 4)
  print_trees(
   human.total_trees,123,120
