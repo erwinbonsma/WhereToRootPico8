@@ -87,7 +87,8 @@ level_defs={{
  name="square",
  mapdef={0,0,15,15},
  goals={{3,3,3,3},{9,9,3,3},{9,3,3,3},{3,9,3,3}},
- plyrs={{36,36},{84,36},{36,84},{84,84}}
+ plyrs={{36,36},{84,36},{36,84},{84,84}},
+ maxgrowrate=slowgrowrate
 },{
  name="islands",
  mapdef={0,15,15,15},
@@ -2313,7 +2314,7 @@ function cplayer:try_root(obj)
   self:can_root()
   and obj:root()
  ) then
-  self.root_cooldown=60
+  self.root_cooldown=90
   return true
  end
 end
@@ -2341,6 +2342,7 @@ function cplayer:update()
    s.age>=self.root_age
    or not s.moving
    or s:approaching_water()
+   or grid:isgoal(s.x,s.y)
   ) and self:try_root(s)
  ) then
   self:_nxt_rooting()
