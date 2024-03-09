@@ -1,7 +1,7 @@
 Where to Root?
 ==============
 
-[Where to Root][] will become an area control game for the [PICO-8][] fantasy console.
+[Where to Root][] is an area control game for the [PICO-8][] fantasy console.
 
 Origin
 ------
